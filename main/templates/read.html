@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ series }} - {{ chapter }} (Page {{ current_page }})</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='chapter.css') }}">
+    <meta name="theme-color" content="#121212">
+</head>
+<body>
+    <!-- Left navigation zone -->
+    <div class="navigation-zone left-zone" onclick="navigatePage('previous')"></div>
+
+    <!-- Middle navigation zone (for opening settings) -->
+    <div class="navigation-zone middle-zone" onclick="openMenu(event)"></div>
+
+    <!-- Display the current page -->
+    <img src="{{ url_for('main.read_image', folder_type=folder_type, series=series, chapter=chapter, current_page=current_page) }}" alt="Page {{ current_page }}" class="manga-page">
+
+    <!-- Right navigation zone -->
+    <div class="navigation-zone right-zone" onclick="navigatePage('next')"></div>
+
+    <!-- Popup Menu -->
+    <div class="popup-menu" id="popupMenu">
+        <button onclick="location.href='{{ url_for('main.series', folder_type=folder_type, series=series) }}'">Exit to Series</button>
+        <button onclick="alert('Settings will go here')">Settings</button>
+        <button onclick="location.href='{{ previous_chapter_url }}'">Previous Chapter</button>
+        <button onclick="location.href='{{ next_chapter_url }}'">Next Chapter</button>
+    </div>
+
+    <!-- JavaScript for menu toggling and page navigation -->
+    <script>
+        let isMenuVisible = false;
+
+        // Function to open the menu
+        function openMenu(event) {
+            if (!isMenuVisible) {
+                event.stopPropagation(); // Prevents page navigation when the menu is opened
+                document.getElementById("popupMenu").style.display = "block";
+                isMenuVisible = true;
+            }
+        }
+
+        // Function to close the menu
+        function closeMenu() {
+            document.getElementById("popupMenu").style.display = "none";
+            isMenuVisible = false;
+        }
+
+        // Close the menu if clicked outside
+        window.addEventListener('click', function(event) {
+            const menu = document.getElementById("popupMenu");
+            if (isMenuVisible && !menu.contains(event.target)) {
+                closeMenu();
+            }
+        });
+
+        // Prevent clicking on the navigation zones when the menu is visible
+        function navigatePage(direction) {
+            if (direction === 'previous') {
+                if ('{{ previous_page_url }}' !== '') {
+                    location.href = '{{ previous_page_url }}';
+                } else if ('{{ previous_chapter_url }}' !== '') {
+                    location.href = '{{ previous_chapter_url }}';
+                }
+            } else if (direction === 'next') {
+                if ('{{ next_page_url }}' !== '') {
+                    location.href = '{{ next_page_url }}';
+                } else if ('{{ next_chapter_url }}' !== '') {
+                    location.href = '{{ next_chapter_url }}';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

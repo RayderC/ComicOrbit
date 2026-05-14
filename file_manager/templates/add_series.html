@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_name }} - Add Series</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='file_manager.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="{{ url_for('static', filename='js/add_series.js') }}"></script>
+    <meta name="theme-color" content="#121212">
+</head>
+<body>
+    <div class="profile-container">
+        <div class="header">
+            <h1>Manage Files</h1>
+            <div class="action-buttons">
+                <a href="{{ url_for('file_manager.file_manager') }}" class="btn"><i class="fas fa-arrow-left"></i> Back</a>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <form action="{{ url_for('file_manager.add_series') }}" method="get">
+            <div class="filters">
+                <input type="text" id="search" name="search" placeholder="Search for series..." value="{{ search or '' }}">
+                <label><input type="checkbox" id="mangaFilter" name="manga" checked> Manga</label>
+                <label><input type="checkbox" id="comicFilter" name="comic" checked> Comics</label>
+                <button class="btn" type="submit"><i class="fas fa-search"></i> Search</button>
+            </div>
+        </form>
+        </div>
+
+        <div class="results" id="results">
+            {% if search_results %}
+                <div class="search-results">
+                    {% for result in search_results %}
+                        <div class="result-item">
+                            {% if result.manga_type != 'Comic' %}
+                            <a href="{{ url_for('file_manager.add_series_inspect', series_name=result.name, search=search, manga=manga_checked, comic=comic_checked, type='manga') }}" class="result-link">
+                                <img src="{{ url_for('file_manager.proxy_image', image_url=result.image) }}" alt="{{ series_name }}" class="result-image">
+                                <div class="result-info">
+                                    <h3>{{ result.name }}</h3>
+                                        <p><strong>Chapters:</strong> {{ result.chapter_info }}</p>
+                                        <p><strong>Genres:</strong> {{ result.genres | join(', ') }}</p>
+                                        <p><strong>Type:</strong> {{ result.manga_type }}</p>
+                                </div>
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('file_manager.add_series_inspect', series_name=result.name, search=search, manga=manga_checked, comic=comic_checked, type='comic') }}" class="result-link">
+                                <img src="{{ url_for('file_manager.proxy_image', image_url=result.image) }}" alt="{{ series_name }}" class="result-image">
+                                <div class="result-info">
+                                    <h3>{{ result.name }}</h3>
+                                        <p><strong>Description:</strong> {{ result.chapter_info }}</p>
+                                        <p><strong>Year:</strong> {{ result.genres | join(', ') }}</p>
+                                        <p><strong>Type:</strong> {{ result.manga_type }}</p>
+                                </div>
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No results found</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

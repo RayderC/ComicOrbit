@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_name }} - {{ series_data.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='series.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <meta name="theme-color" content="#121212">
+</head>
+<body>
+    <!-- Settings Icon with Dropdown -->
+    <button class="dropdown-menu-trigger" onclick="window.location.href='{{ url_for('profile.profile') }}'">
+        <i class="fas fa-cog"></i>
+    </button>
+
+    <div class="main-container">
+        <div class="title-upload">
+            <h1>
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="ComicOrbit Icon" class="title-icon">
+                ComicOrbit
+            </h1>
+            <a href="{{ url_for('main.home') }}">Home</a>
+        </div>
+
+        <div class="series-details-container">
+            <!-- Display series cover art -->
+            <div class="series-header">
+                <h1>{{ series_data.name }}</h1>
+                <div class="series-details">
+                    <img src="{{ series_data.cover_art }}" alt="{{ series_data.name }}" class="cover-img">
+                    <div class="series-text">
+                        <p><strong>Description:</strong> {{ series_data.description }}</p>
+                        <p><strong>Type:</strong> {{ series_data.type }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chapters-list">
+                <h2>Chapters</h2>
+                <div class="chapter-container">
+                    {% for chapter in series_data.chapters %}
+                        <div class="chapter-card">
+                            <a href="{{ url_for('main.read', folder_type=series_data.type, series=series_data.name, chapter=chapter, current_page=1) }}">
+                                <img src="{{ series_data.cover_art }}" alt="Chapter {{ loop.index }}" class="chapter-img">
+                                <p>Chapter {{ loop.index }}</p>
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

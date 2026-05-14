@@ -1,0 +1,107 @@
+/* General Body Styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Profile Container Styling */
+.profile-container {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    width: 350px;
+    color: #f0f0f0;
+}
+
+h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+label {
+    font-size: 14px;
+    color: #ddd;
+}
+
+input {
+    padding: 12px;
+    width: 100%;
+    margin-top: 5px;
+    border: 1px solid #e50914;
+    background-color: #383838;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box; /* Ensures consistent padding */
+}
+
+input:focus {
+    outline: none;
+    box-shadow: 0 0 5px #e50914;
+    border-color: #e50914;
+}
+
+/* Unified Button and Link Styling */
+.btn {
+    display: inline-block; /* Ensures both elements are inline */
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    background-color: #e50914;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none; /* Removes underline for links */
+    text-align: center; /* Centers text inside */
+    width: 100%; /* Makes both take the same width */
+    max-width: 200px; /* Ensures consistent size */
+    box-sizing: border-box; /* Ensures padding doesn’t affect width */
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #b4070e;
+}
+
+.actions {
+    display: flex;
+    justify-content: center; /* Centers buttons horizontally */
+    gap: 20px; /* Adds space between buttons */
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+}
+
+.messages {
+    margin: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.success {
+    color: #2ecc71;
+}
+
+.danger {
+    color: #e50914;
+}
+
+.info {
+    color: #3498db;
+}

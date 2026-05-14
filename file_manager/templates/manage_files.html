@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_name }} - File Manager</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='manage_files.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <meta name="theme-color" content="#121212">
+</head>
+<body>
+    <div class="profile-container">
+        <h1>Manage Files</h1>
+
+        <div class="action-buttons">
+            <a href="{{ url_for('profile.profile') }}" class="btn"><i class="fas fa-arrow-left"></i> Back to Profile</a>
+            <a href="{{ url_for('file_manager.add_series') }}" class="btn"><i class="fas fa-book"></i> Add Series</a>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Series Name</th>
+                    <th>Series Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for series in series_data %}
+                <tr>
+                    <td>{{ series.series_name }}</td>
+                    <td>{{ series.folder_type }}</td>
+                    <td>
+                        <a href="{{ url_for('file_manager.confirm_remove_series_to_download_list', series_name=series.series_name, read_online_link=series.read_online_link) }}">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

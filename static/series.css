@@ -1,0 +1,307 @@
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+    position: relative;
+}
+
+/* File Browser Container */
+.main-container {
+    padding: 30px;
+    max-width: 900px;
+    margin: 60px auto;
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Header Section */
+.title-upload {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative; /* Add this to enable better positioning */
+}
+
+.title-upload h1 {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.title-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+}
+
+/* Home Button Styling */
+.title-upload a {
+    font-size: 16px;
+    color: #fff; /* White color for a clean look */
+    text-decoration: none; /* Remove underline */
+    padding: 10px 20px; /* Padding for better spacing */
+    background-color: #333; /* Dark background for the button */
+    border-radius: 8px; /* Rounded corners for a smooth look */
+    font-weight: bold; /* Make the text bold for emphasis */
+    display: inline-block; /* Make sure it behaves like a button */
+    text-align: center; /* Center the text horizontally */
+    transition: background-color 0.3s ease; /* Smooth transition for background */
+    margin-top: -10px; /* Move the button up slightly */
+}
+
+/* Hover Effect */
+.title-upload a:hover {
+    background-color: #e50914; /* Red background on hover */
+    color: #fff; /* Ensure the text remains white */
+    text-decoration: none; /* No underline on hover */
+}
+
+/* Button Styling */
+.btn {
+    background-color: #343434;
+    color: #fff;
+    border-radius: 0; /* Default no rounded corners */
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn:hover {
+    background-color: #4a4a4a;
+}
+
+/* Apply rounded corners only to the first and last buttons */
+.btn:first-child {
+    border-radius: 8px 8px 0 0; /* Rounded on the left side */
+}
+
+.btn:last-child {
+    border-radius: 0 0 8px 8px; /* Rounded on the right side */
+}
+
+/* Menu Dropdown */
+.menu-container {
+    position: relative;
+}
+
+.menu-container.active .dropdown-menu {
+    display: block;
+}
+
+/* Settings Menu */
+.settings-btn-menu {
+    position: absolute;
+    right: 20px;
+}
+
+/* dropdown menu */
+
+.dropdown-menu-trigger {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 6px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.dropdown-menu-trigger:hover {
+    color: #e50914;
+    transform: rotate(90deg);
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 35px;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.dropdown-menu.active {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: #fff;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+    background-color: #444;
+}
+
+/* Card styling */
+h1 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+}
+
+.series-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    justify-content: center;
+}
+
+.series-card {
+    width: 150px;
+    background-color: #303030;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    display: flex;
+    border-radius: 12px;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.cover-img {
+    width: 200px;
+    height: auto;
+    object-fit: cover;
+    border-radius: 8px;
+    outline: 4px solid #e50914;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin-top: 10px;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+a {
+    display: block;
+    margin-top: 10px;
+    text-decoration: none;
+    color: #007bff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Series Page Styling */
+.series-details-container {
+    margin: 20px;
+}
+
+.series-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.series-details {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;  /* Align to the left */
+}
+
+.series-text {
+    margin-left: 20px;  /* Space between the image and text */
+}
+
+.cover-img {
+    max-width: 250px;  /* Adjust size as needed */
+    height: auto;  /* Maintain aspect ratio */
+}
+
+
+h1 {
+    font-size: 2em;
+    margin-top: 10px;
+}
+
+.chapters-list {
+    margin-top: 20px;
+}
+
+.chapters-list ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.chapters-list li {
+    margin-bottom: 10px;
+}
+
+.chapters-list a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.chapters-list a:hover {
+    text-decoration: underline;
+}
+
+.chapter-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow items to wrap onto the next row */
+    gap: 20px; /* Space between cards */
+    justify-content: center; /* Center items within the container */
+}
+
+.chapter-card {
+    flex: 1 1 calc(20% - 20px); /* Default size: 20% of the container width minus gap */
+    max-width: 150px; /* Prevent cards from becoming too wide */
+    min-width: 120px; /* Ensure cards are not too small */
+    box-sizing: border-box; /* Include padding and border in width calculation */
+    text-align: center; /* Center-align text under the image */
+}
+
+.chapter-img {
+    width: 100%; /* Image fills the card width */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 8px; /* Rounded corners for images */
+}
+
+.chapter-card p {
+    margin-top: 10px; /* Space between the image and text */
+    font-size: 1rem; /* Font size for chapter text */
+    color: #fff; /* Text color */
+}
+
+/* Add media queries for responsiveness */
+@media (max-width: 1200px) {
+    .chapter-card {
+        flex: 1 1 calc(25% - 20px); /* Four cards per row for smaller screens */
+    }
+}
+
+@media (max-width: 900px) {
+    .chapter-card {
+        flex: 1 1 calc(33.33% - 20px); /* Three cards per row for medium screens */
+    }
+}
+
+@media (max-width: 600px) {
+    .chapter-card {
+        flex: 1 1 calc(50% - 20px); /* Two cards per row for smaller screens */
+    }
+}
+
+@media (max-width: 400px) {
+    .chapter-card {
+        flex: 1 1 calc(100% - 20px); /* One card per row for extra small screens */
+    }
+}

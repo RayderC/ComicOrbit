@@ -1,0 +1,178 @@
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+    position: relative;
+}
+
+/* File Browser Container */
+.main-container {
+    padding: 30px;
+    max-width: 900px;
+    margin: 60px auto;
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Header Section */
+.title-upload {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative; /* Add this to enable better positioning */
+}
+
+.title-upload h1 {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.title-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+}
+
+/* Button Styling */
+.btn {
+    background-color: #343434;
+    color: #fff;
+    border-radius: 0; /* Default no rounded corners */
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn:hover {
+    background-color: #4a4a4a;
+}
+
+/* Apply rounded corners only to the first and last buttons */
+.btn:first-child {
+    border-radius: 8px 8px 0 0; /* Rounded on the left side */
+}
+
+.btn:last-child {
+    border-radius: 0 0 8px 8px; /* Rounded on the right side */
+}
+
+/* Menu Dropdown */
+.menu-container {
+    position: relative;
+}
+
+.menu-container.active .dropdown-menu {
+    display: block;
+}
+
+/* Settings Menu */
+.settings-btn-menu {
+    position: absolute;
+    right: 20px;
+}
+
+/* dropdown menu */
+
+.dropdown-menu-trigger {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 6px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.dropdown-menu-trigger:hover {
+    color: #e50914;
+    transform: rotate(90deg);
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 35px;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.dropdown-menu.active {
+    display: block;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: #fff;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+    background-color: #444;
+}
+
+/* Card styling */
+h1 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+}
+
+.series-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    justify-content: center;
+}
+
+.series-card {
+    width: 175px;
+    background-color: #303030;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    display: flex;
+    border-radius: 12px;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.cover-img {
+    width: 175px;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 8px;
+    outline: 4px solid #e50914;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin-top: 10px;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+a {
+    display: block;
+    text-decoration: none;
+    color: white;
+}
+
+a:hover {
+    text-decoration: underline;
+}
