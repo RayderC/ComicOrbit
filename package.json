@@ -1,0 +1,36 @@
+{
+  "name": "comicorbit",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 7080",
+    "build": "next build",
+    "start": "next start -p 7080",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.5.0",
+    "cheerio": "^1.0.0",
+    "cookie": "^1.1.1",
+    "iron-session": "^8.0.4",
+    "next": "16.1.1",
+    "p-limit": "^7.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "yauzl": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/yauzl": "^2.10.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "typescript": "^5"
+  }
+}

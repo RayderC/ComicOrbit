@@ -1,0 +1,14 @@
+services:
+  comicorbit:
+    image: comicorbit:latest
+    container_name: comicorbit
+    restart: always
+    ports:
+      # host:container
+      - 7080:7080
+    volumes:
+      # Persistent config, SQLite DB, session secret
+      - ./config:/config
+      # Library: downloaded CBZ files
+      - ./Manga:/Manga
+      - ./Comics:/Comics
