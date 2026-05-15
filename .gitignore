@@ -40,3 +40,9 @@ comicorbit.db-shm
 comicorbit.db-wal
 data/
 config/
+
+# Build-time CA certificate injection (for restricted-network builds).
+# The directory must exist for the Dockerfile COPY to succeed, but the
+# certificates themselves are environment-specific and not committed.
+build-certs/*
+!build-certs/.gitkeep

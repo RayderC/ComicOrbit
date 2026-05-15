@@ -1,24 +1,28 @@
-# syntax=docker/dockerfile:1.7
-
 # ---------- deps ----------
-FROM node:20-bookworm-slim AS deps
+# Using the full node image (not -slim) so build tools for better-sqlite3's
+# native binding are already installed — no apt-get needed during build.
+FROM node:20-bookworm AS deps
 WORKDIR /app
 
-# better-sqlite3 needs a toolchain to build its native binding from source.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Inject any extra root CAs that may be needed by the build environment to
+# reach the npm registry through a TLS-intercepting proxy. The directory may
+# be empty in normal builds, which is fine — the COPY still succeeds.
+COPY build-certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates 2>/dev/null || true
+
+# Node ignores the system CA bundle unless we tell it explicitly.
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund
 
 # ---------- builder ----------
-FROM node:20-bookworm-slim AS builder
+FROM node:20-bookworm AS builder
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+COPY build-certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates 2>/dev/null || true
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -29,12 +33,9 @@ ENV SESSION_SECRET=build_time_placeholder_secret_at_least_32_chars
 RUN npm run build
 
 # ---------- runner ----------
+# -slim is fine for the runner — no native compilation happens here.
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
