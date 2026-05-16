@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getIronSession } from "iron-session";
+import { cookies } from "next/headers";
+import { sessionOptions, User } from "@/lib/session";
 import Navigation from "../../components/Navigation";
 import { StatusBadge, TypeBadge } from "../../components/StatusBadge";
 import ChapterList, { type Chapter } from "../../components/ChapterList";
@@ -29,6 +32,9 @@ export default async function SeriesDetail({
   const { id } = await params;
   const seriesId = Number(id);
   if (!Number.isFinite(seriesId)) notFound();
+
+  const session = await getIronSession<{ user?: User }>(await cookies(), sessionOptions);
+  const isAdmin = session.user?.isAdmin === true;
 
   const series = db.prepare(`
     SELECT id, slug, title, type, description, cover_path, status, source, source_url, reading_mode
@@ -80,6 +86,7 @@ export default async function SeriesDetail({
               sourceUrl={series.source_url}
               initialReadingMode={(["ltr", "rtl", "webtoon"].includes(series.reading_mode)
                 ? series.reading_mode : "ltr") as "ltr" | "rtl" | "webtoon"}
+              isAdmin={isAdmin}
             />
           </div>
         </div>
@@ -87,7 +94,7 @@ export default async function SeriesDetail({
         <h2 className="section-title" style={{ fontSize: "20px", marginBottom: "12px" }}>
           Chapters <span style={{ color: "var(--text-subtle)", fontSize: "14px", fontFamily: "var(--font-mono)" }}>{`// ${chapters.length}`}</span>
         </h2>
-        <ChapterList seriesId={series.id} chapters={chapters} />
+        <ChapterList seriesId={series.id} chapters={chapters} isAdmin={isAdmin} />
       </div>
     </div>
   );

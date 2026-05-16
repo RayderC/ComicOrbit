@@ -56,9 +56,9 @@ export default function Navigation() {
           <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Link
               href="/profile"
-              style={{ fontSize: "13px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
-              className={`nav-username-link${pathname.startsWith("/profile") ? " active" : ""}`}
+              className={`nav-profile-btn${pathname.startsWith("/profile") ? " active" : ""}`}
             >
+              <span className="nav-profile-icon">◉</span>
               {username}
             </Link>
             <button

@@ -16,11 +16,13 @@ export default function SeriesDetailActions({
   firstChapterId,
   sourceUrl,
   initialReadingMode,
+  isAdmin = false,
 }: {
   seriesId: number;
   firstChapterId: number | null;
   sourceUrl: string;
   initialReadingMode: ReadingMode;
+  isAdmin?: boolean;
 }) {
   const [fav, setFav] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -91,21 +93,23 @@ export default function SeriesDetailActions({
         </a>
       )}
 
-      <div className="reading-mode-row">
-        <span className="reading-mode-label">Reading mode</span>
-        <div className="reading-mode-pills">
-          {(["ltr", "rtl", "webtoon"] as ReadingMode[]).map((m) => (
-            <button
-              key={m}
-              className={`reading-mode-pill${readingMode === m ? " active" : ""}`}
-              onClick={() => handleModeChange(m)}
-              disabled={savingMode}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
+      {isAdmin && (
+        <div className="reading-mode-row">
+          <span className="reading-mode-label">Reading mode</span>
+          <div className="reading-mode-pills">
+            {(["ltr", "rtl", "webtoon"] as ReadingMode[]).map((m) => (
+              <button
+                key={m}
+                className={`reading-mode-pill${readingMode === m ? " active" : ""}`}
+                onClick={() => handleModeChange(m)}
+                disabled={savingMode}
+              >
+                {MODE_LABELS[m]}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
