@@ -96,10 +96,16 @@ export default function ReaderViewer({
       </div>
 
       <div className="reader-progress-track">
-        <div
-          className="reader-progress-fill"
-          style={{ width: `${Math.round(((page + 1) / total) * 100)}%` }}
+        <span className="reader-slider-label">{page + 1}</span>
+        <input
+          type="range"
+          className="reader-slider"
+          min={0}
+          max={Math.max(0, total - 1)}
+          value={page}
+          onChange={(e) => setPage(Number(e.target.value))}
         />
+        <span className="reader-slider-label">{total}</span>
       </div>
     </div>
   );

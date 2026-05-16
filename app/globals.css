@@ -2328,14 +2328,74 @@ body > * { position: relative; z-index: 2; }
 .reader-nav-btn.next { right: 16px; }
 
 .reader-progress-track {
-  height: 2px;
-  background: var(--surface-2);
+  flex-shrink: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: rgba(10, 10, 18, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+}
+
+.reader-slider-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-width: 28px;
+  text-align: center;
   flex-shrink: 0;
 }
+
+.reader-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  outline: none;
+  cursor: pointer;
+}
+
+.reader-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.reader-slider::-webkit-slider-thumb:hover,
+.reader-slider::-webkit-slider-thumb:active {
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.85);
+  transform: scale(1.15);
+}
+
+.reader-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
+}
+
+.reader-slider::-moz-range-track {
+  height: 3px;
+  background: var(--surface-2);
+  border-radius: 2px;
+}
+
+/* old fill (keep selector to avoid dead-class warnings) */
 .reader-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-cyan), var(--primary-light));
-  transition: width 0.2s ease;
+  display: none;
 }
 
 /* ===================== COMICORBIT: FAVORITE & COLLECTIONS ===================== */
@@ -2602,7 +2662,3 @@ body > * { position: relative; z-index: 2; }
 }
 
 .reader-nav-btn { display: none; }
-
-.reader-progress-track {
-  flex-shrink: 0;
-}

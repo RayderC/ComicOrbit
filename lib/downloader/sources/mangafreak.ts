@@ -159,42 +159,76 @@ export const mangafreakSource: Source = {
 
   async fetchChapter(ref: ChapterRef, onProgress: ProgressFn, signal): Promise<ChapterPayload> {
     let urls: string[] = [];
+    // officialPageCount comes from MangaFreak's own page-selector dropdown.
+    // It reflects only real manga pages — promotional images beyond this count are excluded.
+    let officialPageCount = 0;
 
-    // Strategy 1: scrape the chapter page for embedded image URLs
+    // Strategy 1: scrape the chapter page
     try {
       const pageRes = await fetch(ref.externalId, { headers: UA, signal });
       if (pageRes.ok) {
         const html = await pageRes.text();
         const $ = cheerio.load(html);
 
-        // MangaFreak sometimes stores page URLs in a hidden pipe-separated div
+        // Extract the official page count from the page-navigation <select>.
+        // MangaFreak renders <select><option value="1">1</option>…<option value="N">N</option></select>
+        // where N is the real chapter length (no promotional pages included).
+        const pageNums = $("select option")
+          .map((_, el) => parseInt($(el).attr("value") || "0", 10))
+          .get()
+          .filter((n) => Number.isFinite(n) && n > 0);
+        if (pageNums.length > 1) officialPageCount = Math.max(...pageNums);
+
+        // Also check data-total, data-pages, or any explicit count attribute
+        if (!officialPageCount) {
+          const dataTotal = $("[data-total], [data-pages], [data-pagecount]")
+            .first()
+            .attr("data-total") ??
+            $("[data-total], [data-pages], [data-pagecount]").first().attr("data-pages") ??
+            $("[data-total], [data-pages], [data-pagecount]").first().attr("data-pagecount");
+          const parsed = parseInt(dataTotal || "0", 10);
+          if (parsed > 0) officialPageCount = parsed;
+        }
+
+        // #arraydata: pipe-separated list of image URLs MangaFreak embeds in the page
         const arrayData = $("#arraydata").text().trim();
         if (arrayData) {
-          arrayData.split("|").map((s) => s.trim()).filter(Boolean).forEach((src) => {
+          const allSrcs = arrayData.split("|").map((s) => s.trim()).filter(isPageImage);
+          // Limit to officialPageCount if known; the remainder are promotional images
+          const cap = officialPageCount > 0 ? officialPageCount : allSrcs.length;
+          allSrcs.slice(0, cap).forEach((src) => {
             const abs = absUrl(src);
-            if (isPageImage(abs) && !urls.includes(abs)) urls.push(abs);
+            if (!urls.includes(abs)) urls.push(abs);
           });
         }
 
-        // Collect img tags
+        // img tags — prefer specific chapter-image classes MangaFreak uses
         if (urls.length === 0) {
-          $("img").each((_, el) => {
+          const imgSels = "img.img-loading, img[id^='id_'], img[data-index], .chapter-images img, .chapter_images img";
+          const specificImgs: string[] = [];
+          $(imgSels).each((_, el) => {
             const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy") || "";
-            if (isPageImage(src) && !urls.includes(absUrl(src))) {
-              urls.push(absUrl(src));
-            }
+            if (isPageImage(src)) specificImgs.push(absUrl(src));
           });
+          // Fallback: all img tags
+          if (specificImgs.length === 0) {
+            $("img").each((_, el) => {
+              const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy") || "";
+              if (isPageImage(src)) specificImgs.push(absUrl(src));
+            });
+          }
+          const cap = officialPageCount > 0 ? officialPageCount : specificImgs.length;
+          specificImgs.slice(0, cap).forEach((u) => { if (!urls.includes(u)) urls.push(u); });
         }
 
-        // Mine script tags for JSON image arrays
+        // Script-tag image arrays
         if (urls.length < 2) {
           const scriptText = $("script").map((_, el) => $(el).html() || "").get().join("\n");
           const found = [...scriptText.matchAll(/["'`](https?:\/\/[^"'`\s]+\.(?:jpg|jpeg|png|webp))["'`]/gi)]
             .map((m) => m[1])
             .filter(isPageImage);
-          for (const u of found) {
-            if (!urls.includes(u)) urls.push(u);
-          }
+          const cap = officialPageCount > 0 ? officialPageCount : found.length;
+          found.slice(0, cap).forEach((u) => { if (!urls.includes(u)) urls.push(u); });
         }
       }
     } catch (e) {
@@ -202,15 +236,16 @@ export const mangafreakSource: Source = {
       console.warn(`[mangafreak] chapter page scrape failed for ${ref.externalId}:`, (e as Error).message);
     }
 
-    // Strategy 2: probe images.mangafreak.me with HEAD until 404
-    // MangaFreak chapter URLs look like /Read1_Series_Name_3 — strip the "Read{n}_" prefix
-    // to get the real series slug used on the image CDN.
+    // Strategy 2: probe images.mangafreak.me with HEAD
+    // Chapter URLs like /Read1_Series_Name_3 — strip the "Read{n}_" prefix for the CDN slug.
+    // If we have an official count, stop there so promotional pages are never probed.
     if (urls.length === 0) {
       const chapterSeg = slugFromUrl(ref.externalId.replace(/\/$/, ""));
       const seriesSlug = chapterSeg.replace(/^read\d+_/, "").replace(/_\d+(\.\d+)?$/, "");
       const ch = ref.number % 1 === 0 ? String(Math.floor(ref.number)) : String(ref.number);
-      console.log(`[mangafreak] scrape yielded no images, probing for ${seriesSlug} ch${ch}`);
-      for (let n = 1; n <= 200; n++) {
+      const maxProbe = officialPageCount > 0 ? officialPageCount : 200;
+      console.log(`[mangafreak] probing ${seriesSlug} ch${ch} (max ${maxProbe})`);
+      for (let n = 1; n <= maxProbe; n++) {
         const u = `https://images.mangafreak.me/mangas/${seriesSlug}/${seriesSlug}_${ch}/${seriesSlug}_${ch}_${n}.jpg`;
         try {
           const head = await fetch(u, { method: "HEAD", headers: UA, signal });
@@ -225,7 +260,7 @@ export const mangafreakSource: Source = {
     }
 
     if (urls.length === 0) {
-      throw new Error(`No pages found for chapter ${ref.number} — tried scraping ${ref.externalId}`);
+      throw new Error(`No pages found for chapter ${ref.number} — URL: ${ref.externalId}`);
     }
 
     const buffers: Buffer[] = new Array(urls.length);
@@ -238,16 +273,13 @@ export const mangafreakSource: Source = {
       onProgress(done, urls.length);
     })));
 
-    // Strip trailing promotional/logo pages that MangaFreak appends.
-    // Manga pages are portrait (h > w); social media banners are landscape (w > h).
+    // Final safety: drop any trailing landscape images (promotional banners).
+    // Real manga pages are always portrait (h ≥ w).
     const filtered = [...buffers];
     for (let i = 0; i < 5 && filtered.length > 1; i++) {
       const dims = getImageDimensions(filtered[filtered.length - 1]);
-      if (dims && dims.w > dims.h) {
-        filtered.pop();
-      } else {
-        break;
-      }
+      if (dims && dims.w > dims.h) filtered.pop();
+      else break;
     }
 
     return { kind: "images", images: filtered };
