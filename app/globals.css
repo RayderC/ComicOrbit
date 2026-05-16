@@ -2402,3 +2402,205 @@ body > * { position: relative; z-index: 2; }
   .search-result { grid-template-columns: 60px 1fr; }
   .search-result > :last-child { grid-column: 1 / -1; }
 }
+
+/* ===================== COMICORBIT: HOME SHELVES (Netflix-style) ===================== */
+
+.home-content {
+  padding: 32px 0 64px;
+}
+
+.shelf {
+  margin-bottom: 40px;
+  padding: 0 32px;
+}
+
+.shelf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.shelf-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.shelf-view-all {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-light);
+  transition: color 0.15s, gap 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shelf-view-all:hover { color: #c084fc; }
+
+.shelf-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-bright) transparent;
+}
+.shelf-track::-webkit-scrollbar { height: 4px; }
+.shelf-track::-webkit-scrollbar-track { background: transparent; }
+.shelf-track::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 2px;
+}
+
+.shelf-card {
+  flex-shrink: 0;
+  width: 150px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.shelf-card:hover {
+  transform: scale(1.05);
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.2),
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(168, 85, 247, 0.2);
+  z-index: 2;
+}
+
+.shelf-card-cover {
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(168,85,247,0.04) 0%, transparent 50%),
+    #0d0d18;
+  position: relative;
+  flex-shrink: 0;
+}
+.shelf-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+.shelf-card:hover .shelf-card-cover img { transform: scale(1.06); }
+
+.shelf-card-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--primary-light);
+  opacity: 0.2;
+}
+
+.shelf-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 28px 10px 10px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.shelf-card:hover .shelf-card-overlay { opacity: 1; }
+
+.shelf-card-overlay-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.shelf-card-overlay-sub {
+  font-size: 9px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.shelf-card-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.15);
+}
+.shelf-card-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--primary-light));
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.5);
+}
+
+.shelf-card-info {
+  padding: 10px 10px 12px;
+  flex: 1;
+}
+.shelf-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.shelf-card-sub {
+  font-size: 10px;
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .shelf { padding: 0 16px; }
+  .shelf-card { width: 120px; }
+}
+
+/* ===================== COMICORBIT: READER TOPBAR TOGGLE ===================== */
+
+.reader-topbar {
+  overflow: hidden;
+  max-height: 80px;
+  transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+}
+
+.reader-topbar-hidden {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  pointer-events: none;
+}
+
+.reader-viewport {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reader-nav-btn { display: none; }

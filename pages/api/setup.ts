@@ -25,8 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(400).json({ message: "Missing field(s)" });
     return;
   }
-  if (typeof password !== "string" || password.length < 8) {
-    res.status(400).json({ message: "Password must be at least 8 characters" });
+  if (typeof password !== "string" || password.length < 5) {
+    res.status(400).json({ message: "Password must be at least 5 characters" });
     return;
   }
 

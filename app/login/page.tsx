@@ -34,8 +34,7 @@ export default function Login() {
     });
     setLoading(false);
     if (res.ok) {
-      const data = await res.json();
-      router.push(data?.user?.isAdmin ? "/dashboard" : "/library");
+      router.push("/");
     } else {
       setError((await res.json()).message || "Login failed");
     }

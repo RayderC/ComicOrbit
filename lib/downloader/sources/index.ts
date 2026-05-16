@@ -9,7 +9,7 @@ export const SOURCES: Record<string, Source> = {
   getcomics: getcomicsSource,
 };
 
-export const MANGA_SOURCES = ["mangadex", "mangafreak"] as const;
+export const MANGA_SOURCES = ["mangafreak", "mangadex"] as const;
 export const COMIC_SOURCES = ["getcomics"] as const;
 
 export function getSource(id: string): Source {
