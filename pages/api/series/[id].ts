@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "GET") {
     const row = db.prepare(`
-      SELECT id, slug, title, type, source, source_url, description, cover_path, status, one_shot, series_folder, created_at, updated_at
+      SELECT id, slug, title, type, source, source_url, description, cover_path, status, one_shot, series_folder, reading_mode, created_at, updated_at
       FROM series WHERE id = ?
     `).get(id) as SeriesRow | undefined;
     if (!row) { res.status(404).json({ message: "Not found" }); return; }
@@ -31,10 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "PUT") {
-    const { title, status, description, tags } = req.body ?? {};
+    const { title, status, description, tags, readingMode } = req.body ?? {};
     if (title) db.prepare("UPDATE series SET title = ?, updated_at = datetime('now') WHERE id = ?").run(title, id);
     if (status) db.prepare("UPDATE series SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
     if (typeof description === "string") db.prepare("UPDATE series SET description = ?, updated_at = datetime('now') WHERE id = ?").run(description, id);
+    if (typeof readingMode === "string" && ["ltr", "rtl", "webtoon"].includes(readingMode)) {
+      db.prepare("UPDATE series SET reading_mode = ?, updated_at = datetime('now') WHERE id = ?").run(readingMode, id);
+    }
     if (Array.isArray(tags)) {
       const txn = db.transaction((list: string[]) => {
         db.prepare("DELETE FROM series_tags WHERE series_id = ?").run(id);

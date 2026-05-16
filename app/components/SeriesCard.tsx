@@ -13,6 +13,7 @@ export interface Series {
   status?: string;
   description?: string;
   tags?: string[];
+  chapter_count?: number;
 }
 
 export default function SeriesCard({
@@ -73,11 +74,14 @@ export default function SeriesCard({
 
       <div className="series-card-body">
         <h3 className="series-card-title">{series.title}</h3>
-        {series.status && series.status !== "unknown" && (
-          <div className="series-card-meta">
+        <div className="series-card-meta">
+          {series.status && series.status !== "unknown" && (
             <span style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>{series.status}</span>
-          </div>
-        )}
+          )}
+          {series.chapter_count !== undefined && series.chapter_count > 0 && (
+            <span className="series-card-ch-count">{series.chapter_count} ch</span>
+          )}
+        </div>
       </div>
     </Link>
   );

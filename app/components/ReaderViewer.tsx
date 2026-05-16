@@ -11,10 +11,11 @@ interface Props {
   initialPage: number;
   nextChapterId: number | null;
   prevChapterId: number | null;
+  readingMode: "ltr" | "rtl" | "webtoon";
 }
 
 export default function ReaderViewer({
-  seriesId, seriesTitle, chapter, initialPage, nextChapterId, prevChapterId,
+  seriesId, seriesTitle, chapter, initialPage, nextChapterId, prevChapterId, readingMode,
 }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(Math.max(0, Math.min(initialPage, chapter.page_count - 1)));
@@ -22,6 +23,7 @@ export default function ReaderViewer({
   const total = Math.max(1, chapter.page_count);
   const lastSaved = useRef(-1);
   const preloadRef = useRef<HTMLImageElement | null>(null);
+  const pageEls = useRef<(HTMLImageElement | null)[]>([]);
 
   const saveProgress = useCallback(async (p: number, completed: boolean) => {
     if (!completed && lastSaved.current === p) return;
@@ -40,53 +42,143 @@ export default function ReaderViewer({
   }, [page, total, saveProgress]);
 
   const goPrev = useCallback(() => {
-    if (page > 0) setPage(page - 1);
+    if (page > 0) setPage((p) => p - 1);
     else if (prevChapterId) router.push(`/library/${seriesId}/read/${prevChapterId}`);
   }, [page, prevChapterId, router, seriesId]);
 
   const goNext = useCallback(() => {
-    if (page < total - 1) setPage(page + 1);
+    if (page < total - 1) setPage((p) => p + 1);
     else if (nextChapterId) router.push(`/library/${seriesId}/read/${nextChapterId}`);
   }, [page, total, nextChapterId, router, seriesId]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") goPrev();
-      else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goNext(); }
-      else if (e.key === "Escape") router.push(`/library/${seriesId}`);
+      if (e.key === "Escape") { router.push(`/library/${seriesId}`); return; }
+      if (readingMode === "rtl") {
+        if (e.key === "ArrowLeft") { e.preventDefault(); goNext(); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); goPrev(); }
+        else if (e.key === " ") { e.preventDefault(); goNext(); }
+      } else {
+        if (e.key === "ArrowLeft") goPrev();
+        else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goNext(); }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, router, seriesId]);
+  }, [goNext, goPrev, router, seriesId, readingMode]);
 
+  // Preload next page (paged modes only)
   useEffect(() => {
+    if (readingMode === "webtoon") return;
     if (page < total - 1) {
       const img = new Image();
       img.src = `/api/read/${chapter.id}/page/${page + 1}`;
       preloadRef.current = img;
     }
-  }, [page, total, chapter.id]);
+  }, [page, total, chapter.id, readingMode]);
+
+  // Webtoon IntersectionObserver — update page counter as images scroll into view
+  useEffect(() => {
+    if (readingMode !== "webtoon") return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = pageEls.current.indexOf(entry.target as HTMLImageElement);
+            if (idx >= 0) setPage(idx);
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    const refs = [...pageEls.current];
+    refs.forEach((ref) => { if (ref) obs.observe(ref); });
+    return () => obs.disconnect();
+  }, [readingMode, total, chapter.id]);
 
   function handleViewportClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (readingMode === "webtoon") {
+      setTopbarVisible((v) => !v);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
-    if (pct < 0.3) goPrev();
-    else if (pct > 0.7) goNext();
-    else setTopbarVisible((v) => !v);
+    if (readingMode === "rtl") {
+      // In RTL: left side advances (next page), right side goes back
+      if (pct < 0.3) goNext();
+      else if (pct > 0.7) goPrev();
+      else setTopbarVisible((v) => !v);
+    } else {
+      if (pct < 0.3) goPrev();
+      else if (pct > 0.7) goNext();
+      else setTopbarVisible((v) => !v);
+    }
   }
 
+  function handleSliderChange(val: number) {
+    if (readingMode === "webtoon") {
+      pageEls.current[val]?.scrollIntoView({ behavior: "smooth" });
+    }
+    setPage(val);
+  }
+
+  const trackClass = `reader-progress-track${topbarVisible ? "" : " reader-progress-track-hidden"}`;
+  const topbarClass = `reader-topbar${topbarVisible ? "" : " reader-topbar-hidden"}`;
+
+  const progressBar = (
+    <div className={trackClass}>
+      <span className="reader-slider-label">{page + 1}</span>
+      <input
+        type="range"
+        className="reader-slider"
+        min={0}
+        max={Math.max(0, total - 1)}
+        value={page}
+        onChange={(e) => handleSliderChange(Number(e.target.value))}
+      />
+      <span className="reader-slider-label">{total}</span>
+    </div>
+  );
+
+  const topBar = (
+    <div className={topbarClass}>
+      <Link href={`/library/${seriesId}`} className="btn btn-ghost btn-sm">← Back</Link>
+      <div className="reader-title">{seriesTitle} — Chapter {chapter.number}</div>
+      <div className="reader-page-counter">{page + 1} / {total}</div>
+    </div>
+  );
+
+  // ── Webtoon mode: vertical scroll through all pages ──
+  if (readingMode === "webtoon") {
+    return (
+      <div className="reader-page">
+        {topBar}
+        <div className="reader-viewport reader-viewport-webtoon" onClick={handleViewportClick}>
+          {Array.from({ length: total }, (_, i) => (
+            <img
+              key={i}
+              ref={(el) => { pageEls.current[i] = el; }}
+              src={`/api/read/${chapter.id}/page/${i}`}
+              alt={`Page ${i + 1}`}
+            />
+          ))}
+          {nextChapterId && (
+            <div className="reader-webtoon-next">
+              <Link href={`/library/${seriesId}/read/${nextChapterId}`} className="btn btn-primary">
+                Next Chapter →
+              </Link>
+            </div>
+          )}
+        </div>
+        {progressBar}
+      </div>
+    );
+  }
+
+  // ── Paged mode (LTR / RTL) ──
   return (
     <div className="reader-page">
-      <div className={`reader-topbar${topbarVisible ? "" : " reader-topbar-hidden"}`}>
-        <Link href={`/library/${seriesId}`} className="btn btn-ghost btn-sm">← Back</Link>
-        <div className="reader-title">
-          {seriesTitle} — Chapter {chapter.number}
-        </div>
-        <div className="reader-page-counter">
-          {page + 1} / {total}
-        </div>
-      </div>
-
+      {topBar}
       <div className="reader-viewport" onClick={handleViewportClick}>
         <img
           src={`/api/read/${chapter.id}/page/${page}`}
@@ -94,19 +186,7 @@ export default function ReaderViewer({
           style={{ pointerEvents: "none" }}
         />
       </div>
-
-      <div className="reader-progress-track">
-        <span className="reader-slider-label">{page + 1}</span>
-        <input
-          type="range"
-          className="reader-slider"
-          min={0}
-          max={Math.max(0, total - 1)}
-          value={page}
-          onChange={(e) => setPage(Number(e.target.value))}
-        />
-        <span className="reader-slider-label">{total}</span>
-      </div>
+      {progressBar}
     </div>
   );
 }

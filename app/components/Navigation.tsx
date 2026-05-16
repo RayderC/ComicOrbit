@@ -54,9 +54,13 @@ export default function Navigation() {
 
         {isLoggedIn && (
           <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "13px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            <Link
+              href="/profile"
+              style={{ fontSize: "13px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
+              className={`nav-username-link${pathname.startsWith("/profile") ? " active" : ""}`}
+            >
               {username}
-            </span>
+            </Link>
             <button
               onClick={handleLogout}
               className="btn btn-ghost btn-sm"

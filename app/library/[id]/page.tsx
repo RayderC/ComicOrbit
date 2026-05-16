@@ -18,6 +18,7 @@ interface SeriesRow {
   status: string;
   source: string;
   source_url: string;
+  reading_mode: string;
 }
 
 export default async function SeriesDetail({
@@ -30,7 +31,7 @@ export default async function SeriesDetail({
   if (!Number.isFinite(seriesId)) notFound();
 
   const series = db.prepare(`
-    SELECT id, slug, title, type, description, cover_path, status, source, source_url
+    SELECT id, slug, title, type, description, cover_path, status, source, source_url, reading_mode
     FROM series WHERE id = ?
   `).get(seriesId) as SeriesRow | undefined;
   if (!series) notFound();
@@ -77,6 +78,8 @@ export default async function SeriesDetail({
               seriesId={series.id}
               firstChapterId={chapters[0]?.id ?? null}
               sourceUrl={series.source_url}
+              initialReadingMode={(["ltr", "rtl", "webtoon"].includes(series.reading_mode)
+                ? series.reading_mode : "ltr") as "ltr" | "rtl" | "webtoon"}
             />
           </div>
         </div>

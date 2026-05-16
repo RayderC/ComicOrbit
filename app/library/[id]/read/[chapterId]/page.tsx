@@ -14,7 +14,7 @@ interface ChapterRow {
   title: string;
   page_count: number;
 }
-interface SeriesRow { id: number; title: string; }
+interface SeriesRow { id: number; title: string; reading_mode: string; }
 
 export default async function ReaderPage({
   params, searchParams,
@@ -34,7 +34,7 @@ export default async function ReaderPage({
   const cId = Number(chapterId);
   if (!Number.isFinite(seriesId) || !Number.isFinite(cId)) notFound();
 
-  const series = db.prepare("SELECT id, title FROM series WHERE id = ?").get(seriesId) as SeriesRow | undefined;
+  const series = db.prepare("SELECT id, title, reading_mode FROM series WHERE id = ?").get(seriesId) as SeriesRow | undefined;
   const chapter = db.prepare(
     "SELECT id, series_id, number, title, page_count FROM chapters WHERE id = ? AND series_id = ?"
   ).get(cId, seriesId) as ChapterRow | undefined;
@@ -49,6 +49,10 @@ export default async function ReaderPage({
 
   const initialPage = Math.max(0, Math.min(Number(page || 0) || 0, Math.max(0, chapter.page_count - 1)));
 
+  const readingMode = (["ltr", "rtl", "webtoon"].includes(series.reading_mode)
+    ? series.reading_mode
+    : "ltr") as "ltr" | "rtl" | "webtoon";
+
   return (
     <ReaderViewer
       seriesId={seriesId}
@@ -57,6 +61,7 @@ export default async function ReaderPage({
       initialPage={initialPage}
       nextChapterId={next?.id ?? null}
       prevChapterId={prev?.id ?? null}
+      readingMode={readingMode}
     />
   );
 }

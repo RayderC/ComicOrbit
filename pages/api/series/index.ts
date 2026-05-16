@@ -18,8 +18,10 @@ export interface SeriesRow {
   status: string;
   one_shot: number;
   series_folder: string;
+  reading_mode: string;
   created_at: string;
   updated_at: string;
+  chapter_count?: number;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -40,11 +42,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const rows = db.prepare(`
-      SELECT id, slug, title, type, source, source_url, description, cover_path, status, one_shot, series_folder, created_at, updated_at
-      FROM series
+      SELECT s.id, s.slug, s.title, s.type, s.source, s.source_url, s.description,
+             s.cover_path, s.status, s.one_shot, s.series_folder, s.reading_mode,
+             s.created_at, s.updated_at,
+             (SELECT COUNT(*) FROM chapters WHERE series_id = s.id) as chapter_count
+      FROM series s
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-      ORDER BY title COLLATE NOCASE ASC
-    `).all(...params) as SeriesRow[];
+      ORDER BY s.title COLLATE NOCASE ASC
+    `).all(...params) as (SeriesRow & { chapter_count: number; reading_mode: string })[];
 
     const tagMap = new Map<number, string[]>();
     const tagRows = db.prepare("SELECT series_id, tag FROM series_tags").all() as { series_id: number; tag: string }[];

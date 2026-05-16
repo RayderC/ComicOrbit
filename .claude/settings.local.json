@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker push *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)",
+      "Bash(.\\\\node_modules\\\\.bin\\\\next build *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'db: add busy_timeout=5000 to prevent SQLite lock during next build *)",
+      "Bash(git commit -m 'Remove collections, add logout + username to nav *)",
+      "Bash(git push *)"
+    ]
+  }
+}
