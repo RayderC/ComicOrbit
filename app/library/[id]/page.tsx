@@ -84,9 +84,6 @@ export default async function SeriesDetail({
               seriesId={series.id}
               firstChapterId={chapters[0]?.id ?? null}
               sourceUrl={series.source_url}
-              initialReadingMode={(["ltr", "rtl", "webtoon"].includes(series.reading_mode)
-                ? series.reading_mode : "ltr") as "ltr" | "rtl" | "webtoon"}
-              isAdmin={isAdmin}
             />
           </div>
         </div>

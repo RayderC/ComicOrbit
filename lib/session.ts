@@ -22,10 +22,12 @@ if (!sessionPassword || sessionPassword.length < 32) {
   );
 }
 
+// Default false so plain-HTTP local-network access works out of the box.
+// Set SESSION_COOKIE_SECURE=true if you terminate TLS in front of this app.
 const secureCookie =
   process.env.SESSION_COOKIE_SECURE != null
     ? process.env.SESSION_COOKIE_SECURE === "true"
-    : process.env.NODE_ENV === "production";
+    : false;
 
 export const sessionOptions: SessionOptions = {
   password: sessionPassword,

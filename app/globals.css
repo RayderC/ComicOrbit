@@ -2104,10 +2104,14 @@ body > * { position: relative; z-index: 2; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  /* No overflow:hidden — it clips the three-dot dropdown menu */
 }
 
+.chapter-row:first-child { border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0; }
+.chapter-row:last-child  { border-radius: 0 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px); }
+
 .chapter-row {
+  position: relative; /* needed so z-index elevates the open dropdown above sibling rows */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2120,6 +2124,7 @@ body > * { position: relative; z-index: 2; }
   background: linear-gradient(90deg, rgba(34, 211, 238, 0.05), rgba(168, 85, 247, 0.04));
 }
 .chapter-row.read { opacity: 0.55; }
+.chapter-row.menu-open { z-index: 100; }
 
 .chapter-row-link {
   display: grid;
@@ -2952,4 +2957,79 @@ body > * { position: relative; z-index: 2; }
 .nav-profile-icon {
   font-size: 11px;
   opacity: 0.75;
+}
+
+/* ===================== CHAPTER LIST HEADER & BULK SELECT ===================== */
+
+.chapter-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 0 10px;
+}
+
+.chapter-select-btn {
+  padding: 5px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border-bright);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chapter-select-btn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+  background: var(--primary-glow);
+}
+
+.chapter-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.chapter-bulk-count {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--primary-light);
+  font-weight: 700;
+  min-width: 80px;
+}
+.chapter-bulk-spacer { flex: 1; min-width: 8px; }
+
+/* Checkbox circle on each row in selection mode */
+.chapter-row-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-bright);
+  background: transparent;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 10px;
+  color: transparent;
+  padding: 0;
+}
+.chapter-row-checkbox:hover { border-color: var(--primary-light); }
+.chapter-row-checkbox.checked {
+  border-color: var(--primary-light);
+  background: var(--primary-light);
+  color: var(--bg);
+}
+
+/* Row highlight when selected */
+.chapter-row.selected {
+  background: rgba(168, 85, 247, 0.07);
 }

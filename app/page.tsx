@@ -35,6 +35,14 @@ interface FavoriteSeries {
   status: string;
 }
 
+interface RecommendedSeries {
+  id: number;
+  title: string;
+  type: string;
+  cover_path: string;
+  status: string;
+}
+
 function ShelfCard({
   href,
   seriesId,
@@ -146,6 +154,34 @@ export default async function Home() {
     `).all(userId) as FavoriteSeries[];
   } catch { /* ignore */ }
 
+  // Recommended: series that share tags with read series, not yet started by this user
+  let recommended: RecommendedSeries[] = [];
+  try {
+    recommended = db.prepare(`
+      SELECT DISTINCT s.id, s.title, s.type, s.cover_path, s.status
+      FROM series s
+      JOIN series_tags st ON st.series_id = s.id
+      WHERE st.tag IN (
+        SELECT DISTINCT st2.tag
+        FROM read_progress p
+        JOIN chapters c ON c.id = p.chapter_id
+        JOIN series_tags st2 ON st2.series_id = c.series_id
+        WHERE p.user_id = ?
+      )
+      AND s.id NOT IN (
+        SELECT DISTINCT c.series_id
+        FROM read_progress p
+        JOIN chapters c ON c.id = p.chapter_id
+        WHERE p.user_id = ?
+      )
+      AND s.id NOT IN (
+        SELECT series_id FROM favorites WHERE user_id = ?
+      )
+      ORDER BY s.created_at DESC
+      LIMIT 20
+    `).all(userId, userId, userId) as RecommendedSeries[];
+  } catch { /* ignore */ }
+
   const isEmpty = continueReading.length === 0 && recentChapters.length === 0;
 
   return (
@@ -183,6 +219,21 @@ export default async function Home() {
                 hasCover={!!ch.cover_path}
                 title={ch.series_title}
                 subtitle={`Ch. ${ch.chapter_number}`}
+              />
+            ))}
+          </Shelf>
+        )}
+
+        {recommended.length > 0 && (
+          <Shelf title="Recommended" viewAllHref="/library" viewAllLabel="Browse library →">
+            {recommended.map((s) => (
+              <ShelfCard
+                key={s.id}
+                href={`/library/${s.id}`}
+                seriesId={s.id}
+                hasCover={!!s.cover_path}
+                title={s.title}
+                subtitle={s.type}
               />
             ))}
           </Shelf>

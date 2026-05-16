@@ -1,18 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type ReadingMode = "ltr" | "rtl" | "webtoon";
 
 interface SeriesRow {
   id: number; slug: string; title: string; type: "manga" | "comic";
   status: string; source: string; source_url: string;
+  reading_mode: ReadingMode;
   created_at: string; updated_at: string;
 }
+
+const MODE_LABELS: Record<ReadingMode, string> = {
+  ltr: "LTR",
+  rtl: "RTL",
+  webtoon: "Webtoon",
+};
 
 export default function AdminLibraryPage() {
   const [rows, setRows] = useState<SeriesRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [savingMode, setSavingMode] = useState<number | null>(null);
+  const [uploadingCoverId, setUploadingCoverId] = useState<number | null>(null);
+  const [pendingCoverSeriesId, setPendingCoverSeriesId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
     fetch("/api/series").then((r) => r.json()).then((d: SeriesRow[]) => { setRows(d); setLoading(false); });
@@ -37,6 +50,42 @@ export default function AdminLibraryPage() {
     load();
   }
 
+  function openCoverUpload(id: number) {
+    setPendingCoverSeriesId(id);
+    fileInputRef.current?.click();
+  }
+
+  async function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !pendingCoverSeriesId) return;
+    const id = pendingCoverSeriesId;
+    setUploadingCoverId(id);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      await fetch(`/api/series/${id}/cover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl }),
+      }).catch(() => {});
+      setUploadingCoverId(null);
+      setPendingCoverSeriesId(null);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function changeMode(id: number, mode: ReadingMode) {
+    setSavingMode(id);
+    setRows((prev) => prev.map((s) => s.id === id ? { ...s, reading_mode: mode } : s));
+    await fetch(`/api/series/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ readingMode: mode }),
+    }).catch(() => {});
+    setSavingMode(null);
+  }
+
   return (
     <>
       <div className="dash-header">
@@ -46,6 +95,14 @@ export default function AdminLibraryPage() {
         </div>
         <Link href="/dashboard/add" className="btn btn-primary">+ Add Series</Link>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleCoverFile}
+      />
 
       {loading ? (
         <p style={{ color: "var(--text-muted)" }}>Loading…</p>
@@ -65,6 +122,8 @@ export default function AdminLibraryPage() {
                 <th>Type</th>
                 <th>Source</th>
                 <th>Status</th>
+                <th>Reading Mode</th>
+                <th>Cover</th>
                 <th>Updated</th>
                 <th style={{ width: "260px" }}>Actions</th>
               </tr>
@@ -81,6 +140,32 @@ export default function AdminLibraryPage() {
                     {s.status !== "unknown"
                       ? <span className={`status-badge status-${s.status}`}>{s.status}</span>
                       : <span style={{ color: "var(--text-subtle)" }}>—</span>}
+                  </td>
+                  <td>
+                    <div className="reading-mode-pills" style={{ gap: "4px" }}>
+                      {(["ltr", "rtl", "webtoon"] as ReadingMode[]).map((m) => (
+                        <button
+                          key={m}
+                          className={`reading-mode-pill${(s.reading_mode || "ltr") === m ? " active" : ""}`}
+                          onClick={() => changeMode(s.id, m)}
+                          disabled={savingMode === s.id}
+                          style={{ fontSize: "11px", padding: "2px 8px" }}
+                        >
+                          {MODE_LABELS[m]}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: "12px" }}
+                      onClick={() => openCoverUpload(s.id)}
+                      disabled={uploadingCoverId === s.id}
+                      title="Upload custom cover image"
+                    >
+                      {uploadingCoverId === s.id ? "Uploading…" : "Upload cover"}
+                    </button>
                   </td>
                   <td style={{ color: "var(--text-muted)", fontSize: "13px" }}>
                     {new Date(s.updated_at).toLocaleDateString()}

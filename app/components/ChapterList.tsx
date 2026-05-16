@@ -41,7 +41,14 @@ export default function ChapterList({
   const [localChapters, setLocalChapters] = useState(chapters);
   const [currentPage, setCurrentPage] = useState(1);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  // Fixed-position coordinates for the dropdown (avoids z-index/overflow clipping)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Multi-select state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(localChapters.length / PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
@@ -59,16 +66,88 @@ export default function ChapterList({
       .catch(() => {});
   }, [seriesId]);
 
-  // Close menu when clicking outside
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuDropdownRef.current && !menuDropdownRef.current.contains(e.target as Node)) {
         setMenuOpenId(null);
+        setMenuPos(null);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  // Close dropdown on scroll (fixed position needs this)
+  useEffect(() => {
+    if (!menuOpenId) return;
+    function onScroll() { setMenuOpenId(null); setMenuPos(null); }
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [menuOpenId]);
+
+  function toggleSelectionMode() {
+    setSelectionMode((v) => !v);
+    setSelectedIds(new Set());
+    setMenuOpenId(null);
+    setMenuPos(null);
+  }
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(localChapters.map((c) => c.id)));
+  }
+
+  function deselectAll() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkMark(completed: boolean) {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    setProgress((prev) => {
+      const next = { ...prev };
+      for (const id of ids) {
+        const chapter = localChapters.find((c) => c.id === id);
+        const newPage = completed ? Math.max(0, (chapter?.page_count ?? 1) - 1) : 0;
+        next[id] = { page: newPage, completed: completed ? 1 : 0 };
+      }
+      return next;
+    });
+    await Promise.all(
+      ids.map((id) => {
+        const chapter = localChapters.find((c) => c.id === id);
+        const page = completed ? Math.max(0, (chapter?.page_count ?? 1) - 1) : 0;
+        return fetch("/api/read/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chapter_id: id, page, completed }),
+        }).catch(() => {});
+      })
+    );
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    if (!confirm(`Delete ${selectedIds.size} chapter(s) and their files? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    await Promise.all(
+      ids.map((id) => fetch(`/api/chapters/${id}`, { method: "DELETE" }).catch(() => {}))
+    );
+    setLocalChapters((prev) => prev.filter((c) => !ids.includes(c.id)));
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+  }
 
   function toggleRead(c: Chapter, e: React.MouseEvent) {
     e.preventDefault();
@@ -87,6 +166,7 @@ export default function ChapterList({
   async function deleteChapter(chapterId: number) {
     if (!confirm("Delete this chapter and its file? This cannot be undone.")) return;
     setMenuOpenId(null);
+    setMenuPos(null);
     const r = await fetch(`/api/chapters/${chapterId}`, { method: "DELETE" });
     if (r.ok) {
       setLocalChapters((prev) => prev.filter((c) => c.id !== chapterId));
@@ -105,18 +185,80 @@ export default function ChapterList({
 
   return (
     <div>
+      <div className="chapter-list-header">
+        <button
+          className={`chapter-select-btn${selectionMode ? " active" : ""}`}
+          onClick={toggleSelectionMode}
+        >
+          {selectionMode ? "Cancel" : "Select"}
+        </button>
+      </div>
+
+      {selectionMode && (
+        <div className="chapter-bulk-toolbar">
+          <span className="chapter-bulk-count">
+            {selectedIds.size} selected
+          </span>
+          <div className="chapter-bulk-spacer" />
+          <button className="btn btn-ghost btn-sm" onClick={selectAll} disabled={bulkBusy}>
+            Select all ({localChapters.length})
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={deselectAll} disabled={bulkBusy || selectedIds.size === 0}>
+            Deselect all
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => bulkMark(true)}
+            disabled={bulkBusy || selectedIds.size === 0}
+          >
+            Mark read
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => bulkMark(false)}
+            disabled={bulkBusy || selectedIds.size === 0}
+          >
+            Mark unread
+          </button>
+          {isAdmin && (
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={bulkDelete}
+              disabled={bulkBusy || selectedIds.size === 0}
+            >
+              Delete ({selectedIds.size})
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="chapter-list">
         {visibleChapters.map((c) => {
           const prog = progress[c.id];
           const read = prog?.completed === 1;
           const pagedTo = prog?.page ?? 0;
           const menuOpen = menuOpenId === c.id;
+          const selected = selectedIds.has(c.id);
 
           return (
-            <div key={c.id} className={`chapter-row${read ? " read" : ""}`}>
+            <div
+              key={c.id}
+              className={`chapter-row${read ? " read" : ""}${selected ? " selected" : ""}`}
+            >
+              {selectionMode && (
+                <button
+                  className={`chapter-row-checkbox${selected ? " checked" : ""}`}
+                  onClick={(e) => { e.preventDefault(); toggleSelect(c.id); }}
+                  aria-label={selected ? "Deselect" : "Select"}
+                >
+                  {selected ? "✓" : ""}
+                </button>
+              )}
+
               <Link
-                href={`/library/${seriesId}/read/${c.id}?page=${pagedTo}`}
+                href={selectionMode ? "#" : `/library/${seriesId}/read/${c.id}?page=${pagedTo}`}
                 className="chapter-row-link"
+                onClick={selectionMode ? (e) => { e.preventDefault(); toggleSelect(c.id); } : undefined}
               >
                 <span className="chapter-row-num">#{c.number}</span>
                 <span className="chapter-row-title">{c.title || `Chapter ${c.number}`}</span>
@@ -129,50 +271,60 @@ export default function ChapterList({
                 {pagedTo > 0 && !read && (
                   <span className="chapter-row-resume">p{pagedTo + 1}</span>
                 )}
-                <button
-                  className={`chapter-read-toggle${read ? " read" : ""}`}
-                  onClick={(e) => toggleRead(c, e)}
-                  title={read ? "Click to mark as unread" : "Click to mark as read"}
-                >
-                  {read ? "✓ Read" : "Mark read"}
-                </button>
-                {isAdmin && (
-                  <div
-                    className="chapter-menu-wrap"
-                    ref={menuOpen ? menuRef : undefined}
+                {!selectionMode && (
+                  <button
+                    className={`chapter-read-toggle${read ? " read" : ""}`}
+                    onClick={(e) => toggleRead(c, e)}
+                    title={read ? "Click to mark as unread" : "Click to mark as read"}
                   >
-                    <button
-                      className="chapter-menu-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setMenuOpenId(menuOpen ? null : c.id);
-                      }}
-                      title="Chapter options"
-                    >
-                      ⋯
-                    </button>
-                    {menuOpen && (
-                      <div className="chapter-menu-dropdown">
-                        <button
-                          className="chapter-menu-item danger"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteChapter(c.id);
-                          }}
-                        >
-                          Delete chapter
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    {read ? "✓ Read" : "Mark read"}
+                  </button>
+                )}
+                {isAdmin && !selectionMode && (
+                  <button
+                    className="chapter-menu-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (menuOpen) {
+                        setMenuOpenId(null);
+                        setMenuPos(null);
+                      } else {
+                        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                        setMenuOpenId(c.id);
+                      }
+                    }}
+                    title="Chapter options"
+                  >
+                    ⋯
+                  </button>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Fixed-position dropdown rendered outside the list so it's never clipped */}
+      {menuOpenId !== null && menuPos && (
+        <div
+          ref={menuDropdownRef}
+          className="chapter-menu-dropdown"
+          style={{ position: "fixed", top: menuPos.top, right: menuPos.right, left: "auto" }}
+        >
+          <button
+            className="chapter-menu-item danger"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              deleteChapter(menuOpenId);
+            }}
+          >
+            Delete chapter
+          </button>
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="chapter-pagination">
