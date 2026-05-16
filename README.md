@@ -1,18 +1,25 @@
 # ComicOrbit
 
-Self-hosted comic & manga library: search, download, organize, and read CBZ archives from one place.
+**Self-hosted manga & comic library.** Search, download, and read CBZ archives from your own server — no subscriptions, no tracking.
 
-ComicOrbit is a Next.js 16 + TypeScript app with a cyberpunk-themed UI. It runs in a single Docker container, stores its state in SQLite, and writes downloaded chapters as CBZ files to bind-mounted folders.
+[![Docker Hub](https://img.shields.io/docker/v/rayderc/comicorbit?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/rayderc/comicorbit)
+[![GitHub](https://img.shields.io/badge/GitHub-RayderC%2FComicOrbit-181717?logo=github)](https://github.com/RayderC/ComicOrbit)
+
+---
 
 ## Features
 
-- **Search & queue downloads** from MangaDex (official API), MangaFreak (scraper), and GetComics (direct CBZ/CBR aggregator).
-- **Parallel page downloads** with retry and live progress over Server-Sent Events.
-- **Built-in CBZ reader** that streams pages from disk — no whole-archive load.
-- **Per-user read progress** with "Continue reading".
-- **Tag / status / search filters**, favorites, and custom collections.
-- **Multi-user**, admin-managed, with iron-session encrypted cookies.
-- **Drop-in Docker**: same `/config`, `/Manga`, `/Comics` mount points as the previous Flask version.
+- **Netflix-style home page** — Continue Reading, Recently Added, and Favorites rows
+- **Login-gated** — every page requires authentication; first launch auto-redirects to account setup
+- **Download from MangaDex, MangaFreak, and GetComics** — MangaFreak is the default manga source; parallel page downloads with live progress
+- **Built-in reader** — CBZ pages streamed from disk; tap left/right to turn pages, tap the middle to toggle the toolbar; keyboard arrows also work
+- **Per-user read progress** — picks up exactly where you left off
+- **Favorites & custom collections** — star series and group them however you want
+- **Tag / type / status filters** in the full library view
+- **Multi-user** — admin creates additional accounts from the dashboard
+- **Single-container Docker** — SQLite database, auto-generated session secret, bind-mount volumes for your files
+
+---
 
 ## Quick start
 
@@ -20,68 +27,91 @@ ComicOrbit is a Next.js 16 + TypeScript app with a cyberpunk-themed UI. It runs 
 # docker-compose.yml
 services:
   comicorbit:
-    image: comicorbit:latest
+    image: rayderc/comicorbit:latest
+    container_name: comicorbit
+    restart: always
     ports:
-      - 7080:7080
+      - "7080:7080"
     volumes:
-      - ./config:/config
-      - ./Manga:/Manga
-      - ./Comics:/Comics
+      - ./config:/config   # SQLite DB + session secret
+      - ./Manga:/Manga     # Downloaded manga chapters
+      - ./Comics:/Comics   # Downloaded comics
 ```
 
-```
+```bash
 docker compose up -d
-open http://localhost:7080
+# then open http://localhost:7080
 ```
 
-On first run you'll be redirected to `/setup` to create the admin account. If you're migrating from a previous ComicOrbit install (Python/Flask), bind-mount your existing `/config` directory — users, `download_list.json`, and existing CBZ files in `/Manga` and `/Comics` are imported automatically on first boot.
+On first launch you'll be redirected to the **setup page** to create the admin account (pre-filled as `admin / admin` — change the password after you log in).
 
-## Development
+---
 
-```
-npm install
-npm run dev    # http://localhost:7080
-npm run build
-npm start
-```
+## Environment variables
 
-Env vars:
+| Variable | Default | Purpose |
+|---|---|---|
+| `SESSION_SECRET` | auto-generated | Min 32 chars. Written to `/config/.session_secret` on first run if not set. |
+| `SESSION_COOKIE_SECURE` | `false` | Set to `true` if you put ComicOrbit behind a TLS-terminating reverse proxy (nginx, Traefik, etc). |
+| `DATABASE_PATH` | `/config/comicorbit.db` | SQLite file location. |
+| `CONFIG_DIRECTORY` | `/config` | Directory for the DB and session secret. |
 
-| Variable | Purpose |
-|---|---|
-| `SESSION_SECRET` | Min 32 chars; auto-generated in `/config/.session_secret` if unset. |
-| `SESSION_COOKIE_SECURE` | `true` behind HTTPS, `false` otherwise. |
-| `DATABASE_PATH` | SQLite file location (default `/config/comicorbit.db`). |
-| `CONFIG_DIRECTORY` | Where the SQLite DB and session secret live (default `/config`). |
+---
 
-## Sources
+## Download sources
 
-| Source | Type | How it works | Notes |
-|---|---|---|---|
-| **MangaDex** | manga | Official `api.mangadex.org` JSON. | Most reliable manga source. English chapters only. |
-| **MangaFreak** | manga | HTML scraping of `ww1.mangafreak.me` + image CDN. | Fallback when MangaDex doesn't have the series. |
-| **GetComics** | comic | Scrapes post pages on `getcomics.org` and downloads direct CBZ/CBR links. | Best for English Western comics. Files behind Mega/Mediafire surface as "unsupported_host" and need a manual download. |
+| Source | Content | Method |
+|---|---|---|
+| **MangaFreak** | Manga | HTML scraping — default manga source |
+| **MangaDex** | Manga | Official REST API — English chapters |
+| **GetComics** | Western comics | Scrapes direct CBZ/CBR download links |
 
-Migrated entries from the old Python downloader are placed in the library but not auto-requeued — the source format changed; pick the equivalent series in **Add Series** if you want to keep downloading.
+---
 
 ## Disk layout
 
 ```
 /config/
-  comicorbit.db        # SQLite (users, series, chapters, queue, progress, favorites)
-  .session_secret      # auto-generated
+  comicorbit.db          ← SQLite (users, series, chapters, queue, progress)
+  .session_secret        ← auto-generated 48-byte secret
+
 /Manga/
-  <Series Title>/
-    cover_image.jpg
-    <Series Title> - 1.cbz
-    <Series Title> - 2.cbz
-    ...
+  One Piece/
+    cover.jpg
+    One Piece - 1.cbz
+    One Piece - 2.cbz
+
 /Comics/
-  <Series Title>/
-    cover_image.jpg
-    <Series Title>.cbz
+  Batman/
+    cover.jpg
+    Batman - 1.cbz
 ```
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/RayderC/ComicOrbit.git
+cd ComicOrbit
+npm install
+npm run dev        # http://localhost:7080
+```
+
+Requires Node.js 20+. The SQLite native module is compiled during `npm install`.
+
+---
+
+## Stack
+
+- **Next.js 16** (App Router + Pages Router) · **React 19** · **TypeScript**
+- **SQLite** via `better-sqlite3`
+- **iron-session** for encrypted cookie auth
+- **cheerio** for HTML scraping
+- Cyberpunk/amethyst theme
+
+---
 
 ## License
 
-MIT.
+MIT

@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const SESSION_PASSWORD =
   process.env.SESSION_SECRET ?? "build_time_placeholder_secret_at_least_32_chars";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
   try {
     const session = await getIronSession<{ user?: { id: number; username: string } }>(
