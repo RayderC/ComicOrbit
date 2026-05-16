@@ -2242,16 +2242,17 @@ body > * { position: relative; z-index: 2; }
 /* ===================== COMICORBIT: READER ===================== */
 
 .reader-page {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   background: #050508;
   display: flex;
   flex-direction: column;
-  position: relative;
+  overflow: hidden;
+  z-index: 10;
 }
 
 .reader-topbar {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -2285,19 +2286,17 @@ body > * { position: relative; z-index: 2; }
 
 .reader-viewport {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
   position: relative;
+  overflow: hidden;
 }
 
 .reader-viewport img {
-  max-width: 100%;
-  max-height: calc(100vh - 140px);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 32px rgba(168, 85, 247, 0.1);
-  border-radius: var(--radius-sm);
 }
 
 .reader-nav-btn {
@@ -2331,8 +2330,7 @@ body > * { position: relative; z-index: 2; }
 .reader-progress-track {
   height: 2px;
   background: var(--surface-2);
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
 }
 .reader-progress-fill {
   height: 100%;
@@ -2604,3 +2602,7 @@ body > * { position: relative; z-index: 2; }
 }
 
 .reader-nav-btn { display: none; }
+
+.reader-progress-track {
+  flex-shrink: 0;
+}

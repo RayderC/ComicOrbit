@@ -83,12 +83,16 @@ export const mangafreakSource: Source = {
       || $("title").text().split("|")[0].trim();
     const description = $(".manga_series_description p").first().text().trim();
     const cover = absUrl($(".manga_series_image img").first().attr("src") || "");
-    const statusText = $(".manga_series_data").text().toLowerCase();
-    const status: SeriesMetadata["status"] = statusText.includes("complete")
-      ? "completed"
-      : statusText.includes("ongoing")
-      ? "ongoing"
-      : "unknown";
+    // MangaFreak may put status in several places — search broadly
+    const statusText = $(
+      ".manga_series_data, .manga-status, .status, .detail-info, .manga_detail, .summary_content"
+    ).text().toLowerCase() || $("body").text().toLowerCase();
+    const status: SeriesMetadata["status"] =
+      statusText.includes("complete") || statusText.includes("finished") || statusText.includes("ended")
+        ? "completed"
+        : statusText.includes("ongoing") || statusText.includes("publishing") || statusText.includes("releasing")
+        ? "ongoing"
+        : "unknown";
     const tags = $(".series_sub_genre_list a, .series_genre a").map((_, a) => $(a).text().trim()).get();
 
     return {
@@ -132,21 +136,33 @@ export const mangafreakSource: Source = {
   async fetchChapter(ref: ChapterRef, onProgress: ProgressFn, signal): Promise<ChapterPayload> {
     let urls: string[] = [];
 
-    // Strategy 1: scrape the chapter page for embedded image URLs (most reliable)
+    // Strategy 1: scrape the chapter page for embedded image URLs
     try {
       const pageRes = await fetch(ref.externalId, { headers: UA, signal });
       if (pageRes.ok) {
         const html = await pageRes.text();
         const $ = cheerio.load(html);
 
-        $("img").each((_, el) => {
-          const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy") || "";
-          if (isPageImage(src) && !urls.includes(absUrl(src))) {
-            urls.push(absUrl(src));
-          }
-        });
+        // MangaFreak sometimes stores page URLs in a hidden pipe-separated div
+        const arrayData = $("#arraydata").text().trim();
+        if (arrayData) {
+          arrayData.split("|").map((s) => s.trim()).filter(Boolean).forEach((src) => {
+            const abs = absUrl(src);
+            if (isPageImage(abs) && !urls.includes(abs)) urls.push(abs);
+          });
+        }
 
-        // Also mine script tags for JSON image arrays
+        // Collect img tags
+        if (urls.length === 0) {
+          $("img").each((_, el) => {
+            const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy") || "";
+            if (isPageImage(src) && !urls.includes(absUrl(src))) {
+              urls.push(absUrl(src));
+            }
+          });
+        }
+
+        // Mine script tags for JSON image arrays
         if (urls.length < 2) {
           const scriptText = $("script").map((_, el) => $(el).html() || "").get().join("\n");
           const found = [...scriptText.matchAll(/["'`](https?:\/\/[^"'`\s]+\.(?:jpg|jpeg|png|webp))["'`]/gi)]
@@ -163,12 +179,15 @@ export const mangafreakSource: Source = {
     }
 
     // Strategy 2: probe images.mangafreak.me with HEAD until 404
+    // MangaFreak chapter URLs look like /Read1_Series_Name_3 — strip the "Read{n}_" prefix
+    // to get the real series slug used on the image CDN.
     if (urls.length === 0) {
-      const slug = slugFromUrl(ref.externalId.replace(/_\d+(\.\d+)?\/?$/, "").replace(/\/$/, ""));
+      const chapterSeg = slugFromUrl(ref.externalId.replace(/\/$/, ""));
+      const seriesSlug = chapterSeg.replace(/^read\d+_/, "").replace(/_\d+(\.\d+)?$/, "");
       const ch = ref.number % 1 === 0 ? String(Math.floor(ref.number)) : String(ref.number);
-      console.log(`[mangafreak] scrape yielded no images, probing for ${slug} ch${ch}`);
+      console.log(`[mangafreak] scrape yielded no images, probing for ${seriesSlug} ch${ch}`);
       for (let n = 1; n <= 200; n++) {
-        const u = `https://images.mangafreak.me/mangas/${slug}/${slug}_${ch}/${slug}_${ch}_${n}.jpg`;
+        const u = `https://images.mangafreak.me/mangas/${seriesSlug}/${seriesSlug}_${ch}/${seriesSlug}_${ch}_${n}.jpg`;
         try {
           const head = await fetch(u, { method: "HEAD", headers: UA, signal });
           if (!head.ok) break;
