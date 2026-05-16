@@ -4,6 +4,7 @@ import { getIronSession } from "iron-session";
 import { sessionOptions, User } from "../../../lib/session";
 import fs from "fs";
 import type { SeriesRow } from "./index";
+import { cancelJobForSeries } from "../../../lib/downloader";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const id = Number(req.query.id);
@@ -50,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "DELETE") {
+    cancelJobForSeries(id);
     const deleteFiles = req.query.files === "true";
     const row = db.prepare("SELECT series_folder FROM series WHERE id = ?").get(id) as { series_folder: string } | undefined;
     db.prepare("DELETE FROM series WHERE id = ?").run(id);

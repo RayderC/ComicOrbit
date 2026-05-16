@@ -28,6 +28,29 @@ function slugFromUrl(url: string): string {
   return last.toLowerCase();
 }
 
+function getImageDimensions(buf: Buffer): { w: number; h: number } | null {
+  try {
+    // PNG: 8-byte signature, then IHDR — width at bytes 16-19, height 20-23
+    if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+    }
+    // JPEG: scan for SOF markers (C0/C1/C2/C9/CA/CB)
+    if (buf.length > 10 && buf[0] === 0xff && buf[1] === 0xd8) {
+      let i = 2;
+      while (i + 8 < buf.length) {
+        if (buf[i] !== 0xff) break;
+        const m = buf[i + 1];
+        const segLen = buf.readUInt16BE(i + 2);
+        if (m === 0xc0 || m === 0xc1 || m === 0xc2 || m === 0xc9 || m === 0xca || m === 0xcb) {
+          return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+        }
+        i += 2 + segLen;
+      }
+    }
+  } catch { /* ignore malformed headers */ }
+  return null;
+}
+
 function isPageImage(src: string): boolean {
   if (!src) return false;
   if (!src.match(/\.(jpg|jpeg|png|webp)(\?.*)?$/i)) return false;
@@ -90,7 +113,8 @@ export const mangafreakSource: Source = {
     const status: SeriesMetadata["status"] =
       statusText.includes("complete") || statusText.includes("finished") || statusText.includes("ended")
         ? "completed"
-        : statusText.includes("ongoing") || statusText.includes("publishing") || statusText.includes("releasing")
+        : statusText.includes("ongoing") || statusText.includes("on-going") ||
+          statusText.includes("publishing") || statusText.includes("releasing")
         ? "ongoing"
         : "unknown";
     const tags = $(".series_sub_genre_list a, .series_genre a").map((_, a) => $(a).text().trim()).get();
@@ -214,7 +238,19 @@ export const mangafreakSource: Source = {
       onProgress(done, urls.length);
     })));
 
-    return { kind: "images", images: buffers };
+    // Strip trailing promotional/logo pages that MangaFreak appends.
+    // Manga pages are portrait (h > w); social media banners are landscape (w > h).
+    const filtered = [...buffers];
+    for (let i = 0; i < 5 && filtered.length > 1; i++) {
+      const dims = getImageDimensions(filtered[filtered.length - 1]);
+      if (dims && dims.w > dims.h) {
+        filtered.pop();
+      } else {
+        break;
+      }
+    }
+
+    return { kind: "images", images: filtered };
   },
 };
 

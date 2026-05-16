@@ -239,6 +239,14 @@ async function runJob(job: QueueRow): Promise<void> {
       return;
     }
 
+    // Series may have been deleted while we were downloading
+    if (!getSeries(s.id)) {
+      console.log(`[downloader] series ${s.id} was deleted; stopping job ${job.id}`);
+      aborts.delete(job.id);
+      remove(job.id);
+      return;
+    }
+
     setStatus(job.id, {
       current_chapter: series.one_shot === 1 ? series.title : `Chapter ${ch.number}`,
       progress_pct: Math.round((completed / todo.length) * 100),
@@ -301,6 +309,54 @@ export function cancelJob(queueId: number) {
   if (c) c.abort();
   setStatus(queueId, { status: "paused", current_chapter: "cancelled" });
   remove(queueId);
+}
+
+export function cancelJobForSeries(seriesId: number) {
+  const jobs = db.prepare(
+    "SELECT id FROM download_queue WHERE series_id = ? AND status IN ('queued', 'downloading')"
+  ).all(seriesId) as { id: number }[];
+  for (const { id } of jobs) {
+    const c = aborts.get(id);
+    if (c) { c.abort(); aborts.delete(id); }
+    remove(id);
+  }
+}
+
+export async function scanAllSeries(): Promise<void> {
+  const allSeries = db.prepare(
+    "SELECT id, source, source_url FROM series WHERE source_url != ''"
+  ).all() as { id: number; source: string; source_url: string }[];
+
+  console.log(`[downloader] scanning ${allSeries.length} series for new chapters`);
+  let queued = 0;
+
+  for (const s of allSeries) {
+    const existing = db.prepare(
+      "SELECT id FROM download_queue WHERE series_id = ? AND status IN ('queued', 'downloading')"
+    ).get(s.id);
+    if (existing) continue;
+
+    try {
+      const source = getSource(s.source);
+      const remote = await source.listChapters(s.source_url);
+      const localNums = new Set<number>(
+        (db.prepare("SELECT number FROM chapters WHERE series_id = ?").all(s.id) as { number: number }[])
+          .map((r) => r.number)
+      );
+      const hasNew = remote.some((c) => !localNums.has(c.number));
+      if (hasNew) {
+        db.prepare("INSERT INTO download_queue (series_id) VALUES (?)").run(s.id);
+        queued++;
+        console.log(`[downloader] scan: queued series ${s.id} for update`);
+      }
+    } catch (e) {
+      console.warn(`[downloader] scan: series ${s.id} failed:`, (e as Error).message);
+    }
+
+    await sleep(500);
+  }
+
+  console.log(`[downloader] scan complete — ${queued} series queued`);
 }
 
 function sleep(ms: number): Promise<void> {
