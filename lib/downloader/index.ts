@@ -102,11 +102,14 @@ function getSeries(id: number): SeriesRow | null {
 }
 
 function ensureSeriesFolder(s: SeriesRow): string {
-  if (s.series_folder) return s.series_folder;
   const cfg = getSiteConfig();
   const base = s.type === "comic"
     ? (cfg.COMICS_DIRECTORY || "/Comics")
     : (cfg.MANGA_DIRECTORY || "/Manga");
+
+  // If a stored folder exists on disk, use it; otherwise (re)create at the correct base path.
+  if (s.series_folder && fs.existsSync(s.series_folder)) return s.series_folder;
+
   const dir = path.join(base, sanitizeFsName(s.title));
   fs.mkdirSync(dir, { recursive: true });
   db.prepare("UPDATE series SET series_folder = ? WHERE id = ?").run(dir, s.id);
@@ -129,7 +132,13 @@ async function downloadCoverIfMissing(s: SeriesRow, folder: string, cover?: stri
     return;
   }
   try {
-    const r = await fetch(cover);
+    const r = await fetch(cover, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Referer": "https://ww1.mangafreak.me/",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+    });
     if (!r.ok) return;
     const buf = Buffer.from(await r.arrayBuffer());
     fs.writeFileSync(target, buf);

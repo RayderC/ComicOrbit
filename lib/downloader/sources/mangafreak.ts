@@ -28,6 +28,13 @@ function slugFromUrl(url: string): string {
   return last.toLowerCase();
 }
 
+function isPageImage(src: string): boolean {
+  if (!src) return false;
+  if (!src.match(/\.(jpg|jpeg|png|webp)(\?.*)?$/i)) return false;
+  if (src.match(/\/(logo|icon|banner|avatar|ads?|sprite|thumb_default)/i)) return false;
+  return true;
+}
+
 export const mangafreakSource: Source = {
   id: "mangafreak",
   type: "manga",
@@ -123,21 +130,60 @@ export const mangafreakSource: Source = {
   },
 
   async fetchChapter(ref: ChapterRef, onProgress: ProgressFn, signal): Promise<ChapterPayload> {
-    const slug = slugFromUrl(ref.externalId.replace(/_\d+(\.\d+)?\/?$/, "").replace(/\/$/, ""));
-    const ch = ref.number;
+    let urls: string[] = [];
 
-    // MangaFreak serves pages at images.mangafreak.me/mangas/{slug}/{slug}_{ch}/{slug}_{ch}_{n}.jpg
-    // We probe one page at a time until we hit a 404, then download in parallel.
-    const urls: string[] = [];
-    for (let n = 1; n <= 200; n++) {
-      const u = `https://images.mangafreak.me/mangas/${slug}/${slug}_${ch}/${slug}_${ch}_${n}.jpg`;
-      const head = await fetch(u, { method: "HEAD", headers: UA, signal });
-      if (!head.ok) break;
-      const ct = head.headers.get("content-type") || "";
-      if (!ct.startsWith("image/")) break;
-      urls.push(u);
+    // Strategy 1: scrape the chapter page for embedded image URLs (most reliable)
+    try {
+      const pageRes = await fetch(ref.externalId, { headers: UA, signal });
+      if (pageRes.ok) {
+        const html = await pageRes.text();
+        const $ = cheerio.load(html);
+
+        $("img").each((_, el) => {
+          const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy") || "";
+          if (isPageImage(src) && !urls.includes(absUrl(src))) {
+            urls.push(absUrl(src));
+          }
+        });
+
+        // Also mine script tags for JSON image arrays
+        if (urls.length < 2) {
+          const scriptText = $("script").map((_, el) => $(el).html() || "").get().join("\n");
+          const found = [...scriptText.matchAll(/["'`](https?:\/\/[^"'`\s]+\.(?:jpg|jpeg|png|webp))["'`]/gi)]
+            .map((m) => m[1])
+            .filter(isPageImage);
+          for (const u of found) {
+            if (!urls.includes(u)) urls.push(u);
+          }
+        }
+      }
+    } catch (e) {
+      if ((e as { name?: string }).name === "AbortError") throw e;
+      console.warn(`[mangafreak] chapter page scrape failed for ${ref.externalId}:`, (e as Error).message);
     }
-    if (urls.length === 0) throw new Error("No pages found for chapter");
+
+    // Strategy 2: probe images.mangafreak.me with HEAD until 404
+    if (urls.length === 0) {
+      const slug = slugFromUrl(ref.externalId.replace(/_\d+(\.\d+)?\/?$/, "").replace(/\/$/, ""));
+      const ch = ref.number % 1 === 0 ? String(Math.floor(ref.number)) : String(ref.number);
+      console.log(`[mangafreak] scrape yielded no images, probing for ${slug} ch${ch}`);
+      for (let n = 1; n <= 200; n++) {
+        const u = `https://images.mangafreak.me/mangas/${slug}/${slug}_${ch}/${slug}_${ch}_${n}.jpg`;
+        try {
+          const head = await fetch(u, { method: "HEAD", headers: UA, signal });
+          if (!head.ok) break;
+          const ct = head.headers.get("content-type") || "";
+          if (!ct.startsWith("image/")) break;
+          urls.push(u);
+        } catch {
+          break;
+        }
+      }
+    }
+
+    if (urls.length === 0) {
+      throw new Error(`No pages found for chapter ${ref.number} — tried scraping ${ref.externalId}`);
+    }
 
     const buffers: Buffer[] = new Array(urls.length);
     const limit = pLimit(5);

@@ -19,7 +19,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   // browser always hits same-origin and avoids CORS hassles).
   if (/^https?:\/\//i.test(cover)) {
     try {
-      const upstream = await fetch(cover);
+      const upstream = await fetch(cover, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          "Referer": "https://ww1.mangafreak.me/",
+          "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        },
+      });
       if (!upstream.ok) return NextResponse.json({ message: "upstream cover failed" }, { status: 502 });
       const buf = Buffer.from(await upstream.arrayBuffer());
       return new NextResponse(new Uint8Array(buf), {
