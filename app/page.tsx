@@ -12,6 +12,7 @@ interface ContinueItem {
   series_id: number;
   series_title: string;
   cover_path: string;
+  cover_updated_at: string;
   type: string;
   chapter_id: number;
   chapter_number: number;
@@ -25,6 +26,7 @@ interface RecentChapter {
   series_id: number;
   series_title: string;
   cover_path: string;
+  cover_updated_at: string;
 }
 
 interface FavoriteSeries {
@@ -32,6 +34,7 @@ interface FavoriteSeries {
   title: string;
   type: string;
   cover_path: string;
+  cover_updated_at: string;
   status: string;
 }
 
@@ -40,6 +43,7 @@ interface RecommendedSeries {
   title: string;
   type: string;
   cover_path: string;
+  cover_updated_at: string;
   status: string;
 }
 
@@ -47,6 +51,7 @@ function ShelfCard({
   href,
   seriesId,
   hasCover,
+  coverUpdatedAt,
   title,
   subtitle,
   progressPct,
@@ -54,15 +59,17 @@ function ShelfCard({
   href: string;
   seriesId: number;
   hasCover: boolean;
+  coverUpdatedAt?: string;
   title: string;
   subtitle?: string;
   progressPct?: number;
 }) {
+  const coverSrc = `/api/cover/${seriesId}${coverUpdatedAt ? `?v=${encodeURIComponent(coverUpdatedAt)}` : ""}`;
   return (
     <Link href={href} className="shelf-card">
       <div className="shelf-card-cover">
         {hasCover ? (
-          <img src={`/api/cover/${seriesId}`} alt={title} loading="lazy" />
+          <img src={coverSrc} alt={title} loading="lazy" />
         ) : (
           <div className="shelf-card-placeholder">◈</div>
         )}
@@ -115,7 +122,7 @@ export default async function Home() {
   let continueReading: ContinueItem[] = [];
   try {
     const raw = db.prepare(`
-      SELECT s.id as series_id, s.title as series_title, s.cover_path, s.type,
+      SELECT s.id as series_id, s.title as series_title, s.cover_path, s.updated_at as cover_updated_at, s.type,
              c.id as chapter_id, c.number as chapter_number,
              p.page, c.page_count
       FROM read_progress p
@@ -136,7 +143,7 @@ export default async function Home() {
   try {
     recentChapters = db.prepare(`
       SELECT c.id as chapter_id, c.number as chapter_number, c.series_id,
-             s.title as series_title, s.cover_path
+             s.title as series_title, s.cover_path, s.updated_at as cover_updated_at
       FROM chapters c
       JOIN series s ON s.id = c.series_id
       ORDER BY c.downloaded_at DESC LIMIT 20
@@ -146,7 +153,7 @@ export default async function Home() {
   let favorites: FavoriteSeries[] = [];
   try {
     favorites = db.prepare(`
-      SELECT s.id, s.title, s.type, s.cover_path, s.status
+      SELECT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status
       FROM favorites f
       JOIN series s ON s.id = f.series_id
       WHERE f.user_id = ?
@@ -158,7 +165,7 @@ export default async function Home() {
   let recommended: RecommendedSeries[] = [];
   try {
     recommended = db.prepare(`
-      SELECT DISTINCT s.id, s.title, s.type, s.cover_path, s.status
+      SELECT DISTINCT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status
       FROM series s
       JOIN series_tags st ON st.series_id = s.id
       WHERE st.tag IN (
@@ -197,6 +204,7 @@ export default async function Home() {
                 href={`/library/${item.series_id}/read/${item.chapter_id}?page=${item.page}`}
                 seriesId={item.series_id}
                 hasCover={!!item.cover_path}
+                coverUpdatedAt={item.cover_updated_at}
                 title={item.series_title}
                 subtitle={`Ch. ${item.chapter_number} · p. ${item.page + 1} / ${item.page_count}`}
                 progressPct={
@@ -217,6 +225,7 @@ export default async function Home() {
                 href={`/library/${ch.series_id}/read/${ch.chapter_id}`}
                 seriesId={ch.series_id}
                 hasCover={!!ch.cover_path}
+                coverUpdatedAt={ch.cover_updated_at}
                 title={ch.series_title}
                 subtitle={`Ch. ${ch.chapter_number}`}
               />
@@ -232,6 +241,7 @@ export default async function Home() {
                 href={`/library/${s.id}`}
                 seriesId={s.id}
                 hasCover={!!s.cover_path}
+                coverUpdatedAt={s.cover_updated_at}
                 title={s.title}
                 subtitle={s.type}
               />
@@ -247,6 +257,7 @@ export default async function Home() {
                 href={`/library/${s.id}`}
                 seriesId={s.id}
                 hasCover={!!s.cover_path}
+                coverUpdatedAt={s.cover_updated_at}
                 title={s.title}
                 subtitle={s.type}
               />

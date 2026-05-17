@@ -124,6 +124,7 @@ const migrations = [
   `ALTER TABLE download_queue ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))`,
   `ALTER TABLE series ADD COLUMN reading_mode TEXT NOT NULL DEFAULT 'ltr'`,
   `ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE series ADD COLUMN original_cover_path TEXT NOT NULL DEFAULT ''`,
 ];
 
 for (const sql of migrations) {

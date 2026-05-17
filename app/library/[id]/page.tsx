@@ -7,6 +7,7 @@ import Navigation from "../../components/Navigation";
 import { StatusBadge, TypeBadge } from "../../components/StatusBadge";
 import ChapterList, { type Chapter } from "../../components/ChapterList";
 import SeriesDetailActions from "./SeriesDetailActions";
+import DescriptionExpander from "../../components/DescriptionExpander";
 import db from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ interface SeriesRow {
   source: string;
   source_url: string;
   reading_mode: string;
+  updated_at: string;
 }
 
 export default async function SeriesDetail({
@@ -37,7 +39,7 @@ export default async function SeriesDetail({
   const isAdmin = session.user?.isAdmin === true;
 
   const series = db.prepare(`
-    SELECT id, slug, title, type, description, cover_path, status, source, source_url, reading_mode
+    SELECT id, slug, title, type, description, cover_path, status, source, source_url, reading_mode, updated_at
     FROM series WHERE id = ?
   `).get(seriesId) as SeriesRow | undefined;
   if (!series) notFound();
@@ -59,7 +61,7 @@ export default async function SeriesDetail({
         <div className="series-detail-hero">
           <div className="series-detail-cover">
             {series.cover_path ? (
-              <img src={`/api/cover/${series.id}`} alt={series.title} />
+              <img src={`/api/cover/${series.id}?v=${encodeURIComponent(series.updated_at)}`} alt={series.title} />
             ) : (
               <div className="series-card-media-placeholder">◈</div>
             )}
@@ -77,7 +79,7 @@ export default async function SeriesDetail({
             </div>
 
             {series.description && (
-              <div className="series-detail-description">{series.description}</div>
+              <DescriptionExpander text={series.description} />
             )}
 
             <SeriesDetailActions

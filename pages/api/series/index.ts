@@ -15,6 +15,7 @@ export interface SeriesRow {
   source_url: string;
   description: string;
   cover_path: string;
+  original_cover_path: string;
   status: string;
   one_shot: number;
   series_folder: string;
@@ -43,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const rows = db.prepare(`
       SELECT s.id, s.slug, s.title, s.type, s.source, s.source_url, s.description,
-             s.cover_path, s.status, s.one_shot, s.series_folder, s.reading_mode,
+             s.cover_path, s.original_cover_path, s.status, s.one_shot, s.series_folder, s.reading_mode,
              s.created_at, s.updated_at,
              (SELECT COUNT(*) FROM chapters WHERE series_id = s.id) as chapter_count
       FROM series s

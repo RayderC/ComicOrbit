@@ -7,54 +7,79 @@ import path from "path";
 
 export const config = { api: { bodyParser: { sizeLimit: "10mb" } } };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") { res.status(405).end(); return; }
+const customCoversDir = () => path.join(process.env.CONFIG_DIR || "/config", "covers");
 
+function deleteCustomCoverFiles(id: number) {
+  const dir = customCoversDir();
+  for (const ext of [".jpg", ".jpeg", ".png", ".webp", ".gif"]) {
+    const f = path.join(dir, `${id}${ext}`);
+    if (fs.existsSync(f)) { try { fs.unlinkSync(f); } catch { /* ignore */ } }
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
   if (!session.user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
 
   const id = Number(req.query.id);
   if (!Number.isFinite(id)) { res.status(400).json({ message: "Invalid id" }); return; }
 
-  const { dataUrl } = req.body ?? {};
-  if (typeof dataUrl !== "string") { res.status(400).json({ message: "Missing dataUrl" }); return; }
+  // ── POST: upload custom cover ──
+  if (req.method === "POST") {
+    const { dataUrl } = req.body ?? {};
+    if (typeof dataUrl !== "string") { res.status(400).json({ message: "Missing dataUrl" }); return; }
 
-  const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
-  if (!match) { res.status(400).json({ message: "Invalid image format" }); return; }
+    const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+    if (!match) { res.status(400).json({ message: "Invalid image format" }); return; }
 
-  const [, mime, base64] = match;
-  const ext = mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : mime === "image/gif" ? ".gif" : ".jpg";
-  const buf = Buffer.from(base64, "base64");
+    const [, mime, base64] = match;
+    const ext = mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : mime === "image/gif" ? ".gif" : ".jpg";
+    const buf = Buffer.from(base64, "base64");
 
-  const row = db.prepare("SELECT series_folder FROM series WHERE id = ?").get(id) as { series_folder: string | null } | undefined;
-  if (!row) { res.status(404).json({ message: "Series not found" }); return; }
+    const row = db.prepare("SELECT cover_path, original_cover_path FROM series WHERE id = ?").get(id) as
+      { cover_path: string; original_cover_path: string } | undefined;
+    if (!row) { res.status(404).json({ message: "Series not found" }); return; }
 
-  // Save to series folder if it exists, otherwise use /config
-  const dir = row.series_folder && fs.existsSync(row.series_folder)
-    ? row.series_folder
-    : process.env.CONFIG_DIR || "/config";
-
-  if (!fs.existsSync(dir)) {
-    try { fs.mkdirSync(dir, { recursive: true }); } catch {
-      res.status(500).json({ message: "Could not create directory" }); return;
+    const dir = customCoversDir();
+    if (!fs.existsSync(dir)) {
+      try { fs.mkdirSync(dir, { recursive: true }); } catch {
+        res.status(500).json({ message: "Could not create covers directory" }); return;
+      }
     }
-  }
 
-  // Remove old cover files with different extension
-  for (const oldExt of [".jpg", ".jpeg", ".png", ".webp", ".gif"]) {
-    const old = path.join(dir, `cover${oldExt}`);
-    if (oldExt !== ext && fs.existsSync(old)) {
-      try { fs.unlinkSync(old); } catch { /* ignore */ }
+    // Remove any existing custom cover files for this series
+    deleteCustomCoverFiles(id);
+
+    const coverPath = path.join(dir, `${id}${ext}`);
+    try { fs.writeFileSync(coverPath, buf); } catch {
+      res.status(500).json({ message: "Failed to save file" }); return;
     }
+
+    // Save the original cover_path the first time only
+    const originalToSave = row.original_cover_path || row.cover_path;
+    db.prepare(
+      "UPDATE series SET cover_path = ?, original_cover_path = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(coverPath, originalToSave, id);
+
+    res.json({ ok: true });
+    return;
   }
 
-  const coverPath = path.join(dir, `cover${ext}`);
-  try {
-    fs.writeFileSync(coverPath, buf);
-  } catch {
-    res.status(500).json({ message: "Failed to save file" }); return;
+  // ── DELETE: revert to original cover ──
+  if (req.method === "DELETE") {
+    const row = db.prepare("SELECT original_cover_path FROM series WHERE id = ?").get(id) as
+      { original_cover_path: string } | undefined;
+    if (!row) { res.status(404).json({ message: "Series not found" }); return; }
+
+    deleteCustomCoverFiles(id);
+
+    db.prepare(
+      "UPDATE series SET cover_path = ?, original_cover_path = '', updated_at = datetime('now') WHERE id = ?"
+    ).run(row.original_cover_path || "", id);
+
+    res.json({ ok: true });
+    return;
   }
 
-  db.prepare("UPDATE series SET cover_path = ?, updated_at = datetime('now') WHERE id = ?").run(coverPath, id);
-  res.json({ ok: true });
+  res.status(405).end();
 }

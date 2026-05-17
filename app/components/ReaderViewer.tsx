@@ -24,6 +24,7 @@ export default function ReaderViewer({
   const lastSaved = useRef(-1);
   const preloadRef = useRef<HTMLImageElement | null>(null);
   const pageEls = useRef<(HTMLImageElement | null)[]>([]);
+  const webtoonViewportRef = useRef<HTMLDivElement>(null);
 
   const saveProgress = useCallback(async (p: number, completed: boolean) => {
     if (!completed && lastSaved.current === p) return;
@@ -80,16 +81,22 @@ export default function ReaderViewer({
   // Webtoon IntersectionObserver — update page counter as images scroll into view
   useEffect(() => {
     if (readingMode !== "webtoon") return;
+    const container = webtoonViewportRef.current;
+    if (!container) return;
+
     const obs = new IntersectionObserver(
       (entries) => {
+        // Pick the most-visible entry
+        let best: { idx: number; ratio: number } | null = null;
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const idx = pageEls.current.indexOf(entry.target as HTMLImageElement);
-            if (idx >= 0) setPage(idx);
+          const idx = pageEls.current.indexOf(entry.target as HTMLImageElement);
+          if (idx >= 0 && entry.intersectionRatio > (best?.ratio ?? 0)) {
+            best = { idx, ratio: entry.intersectionRatio };
           }
         });
+        if (best !== null) setPage((best as { idx: number }).idx);
       },
-      { threshold: 0.4 }
+      { root: container, threshold: [0.1, 0.3, 0.5, 0.7] }
     );
     const refs = [...pageEls.current];
     refs.forEach((ref) => { if (ref) obs.observe(ref); });
@@ -104,7 +111,6 @@ export default function ReaderViewer({
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
     if (readingMode === "rtl") {
-      // In RTL: left side advances (next page), right side goes back
       if (pct < 0.3) goNext();
       else if (pct > 0.7) goPrev();
       else setTopbarVisible((v) => !v);
@@ -116,10 +122,17 @@ export default function ReaderViewer({
   }
 
   function handleSliderChange(val: number) {
-    if (readingMode === "webtoon") {
-      pageEls.current[val]?.scrollIntoView({ behavior: "smooth" });
-    }
     setPage(val);
+    if (readingMode === "webtoon") {
+      const el = pageEls.current[val];
+      const container = webtoonViewportRef.current;
+      if (el && container) {
+        // Scroll the container (not the window) to the target image
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        container.scrollTo({ top: elRect.top - containerRect.top + container.scrollTop, behavior: "smooth" });
+      }
+    }
   }
 
   const trackClass = `reader-progress-track${topbarVisible ? "" : " reader-progress-track-hidden"}`;
@@ -153,7 +166,11 @@ export default function ReaderViewer({
     return (
       <div className="reader-page">
         {topBar}
-        <div className="reader-viewport reader-viewport-webtoon" onClick={handleViewportClick}>
+        <div
+          ref={webtoonViewportRef}
+          className="reader-viewport reader-viewport-webtoon"
+          onClick={handleViewportClick}
+        >
           {Array.from({ length: total }, (_, i) => (
             <img
               key={i}

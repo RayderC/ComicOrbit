@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return new NextResponse(new Uint8Array(buf), {
         headers: {
           "Content-Type": upstream.headers.get("content-type") || "image/jpeg",
-          "Cache-Control": "public, max-age=86400",
+          "Cache-Control": "no-cache, must-revalidate",
         },
       });
     } catch (e) {
@@ -48,6 +48,6 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     ext === ".gif" ? "image/gif" :
     "image/jpeg";
   return new NextResponse(new Uint8Array(data), {
-    headers: { "Content-Type": mime, "Cache-Control": "public, max-age=86400" },
+    headers: { "Content-Type": mime, "Cache-Control": "no-cache, must-revalidate" },
   });
 }

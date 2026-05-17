@@ -9,6 +9,7 @@ interface SeriesRow {
   id: number; slug: string; title: string; type: "manga" | "comic";
   status: string; source: string; source_url: string;
   reading_mode: ReadingMode;
+  original_cover_path: string;
   created_at: string; updated_at: string;
 }
 
@@ -24,6 +25,7 @@ export default function AdminLibraryPage() {
   const [busy, setBusy] = useState<number | null>(null);
   const [savingMode, setSavingMode] = useState<number | null>(null);
   const [uploadingCoverId, setUploadingCoverId] = useState<number | null>(null);
+  const [revertingCoverId, setRevertingCoverId] = useState<number | null>(null);
   const [pendingCoverSeriesId, setPendingCoverSeriesId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,15 +66,24 @@ export default function AdminLibraryPage() {
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
-      await fetch(`/api/series/${id}/cover`, {
+      const res = await fetch(`/api/series/${id}/cover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataUrl }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (!res?.ok) alert("Cover upload failed. Check that the series folder is accessible.");
       setUploadingCoverId(null);
       setPendingCoverSeriesId(null);
     };
     reader.readAsDataURL(file);
+  }
+
+  async function revertCover(id: number) {
+    if (!confirm("Revert to the original cover?")) return;
+    setRevertingCoverId(id);
+    await fetch(`/api/series/${id}/cover`, { method: "DELETE" }).catch(() => null);
+    setRevertingCoverId(null);
+    load();
   }
 
   async function changeMode(id: number, mode: ReadingMode) {
@@ -157,15 +168,26 @@ export default function AdminLibraryPage() {
                     </div>
                   </td>
                   <td>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: "12px" }}
-                      onClick={() => openCoverUpload(s.id)}
-                      disabled={uploadingCoverId === s.id}
-                      title="Upload custom cover image"
-                    >
-                      {uploadingCoverId === s.id ? "Uploading…" : "Upload cover"}
-                    </button>
+                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => openCoverUpload(s.id)}
+                        disabled={uploadingCoverId === s.id || revertingCoverId === s.id}
+                        title="Upload custom cover image"
+                      >
+                        {uploadingCoverId === s.id ? "Uploading…" : "Upload Cover"}
+                      </button>
+                      {s.original_cover_path && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => revertCover(s.id)}
+                          disabled={uploadingCoverId === s.id || revertingCoverId === s.id}
+                          title="Revert to original cover"
+                        >
+                          {revertingCoverId === s.id ? "Reverting…" : "Revert Cover"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td style={{ color: "var(--text-muted)", fontSize: "13px" }}>
                     {new Date(s.updated_at).toLocaleDateString()}
