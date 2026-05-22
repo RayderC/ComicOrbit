@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import db, { getSiteConfig, setSiteConfigKey } from "./db";
 
-const DEFAULT_SUBJECT = "mailto:rayder.chance@gmail.com";
+const DEFAULT_SUBJECT = "mailto:dev@rayder.xyz";
 const debug = process.env.DEBUG_PUSH === "1" || process.env.DEBUG_PUSH === "true";
 
 function readSubject(): string {
