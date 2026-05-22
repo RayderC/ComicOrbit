@@ -31,6 +31,7 @@ export default function DownloadProgress() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [live, setLive] = useState<Record<number, ProgressState>>({});
   const [loading, setLoading] = useState(true);
+  const [requeueMsg, setRequeueMsg] = useState("");
 
   async function load() {
     const r = await fetch("/api/downloads");
@@ -67,6 +68,23 @@ export default function DownloadProgress() {
     load();
   }
 
+  async function handleRequeueMissing() {
+    setRequeueMsg("Scanning…");
+    const r = await fetch("/api/downloads/requeue-missing", { method: "POST" });
+    if (!r.ok) {
+      setRequeueMsg("Error — check console");
+      return;
+    }
+    const { series, chapters } = await r.json() as { series: number; chapters: number };
+    if (series === 0) {
+      setRequeueMsg("All files present — nothing to re-queue.");
+    } else {
+      setRequeueMsg(`Re-queued ${series} series (${chapters} missing chapters cleared).`);
+      load();
+    }
+    setTimeout(() => setRequeueMsg(""), 6000);
+  }
+
   async function handleRetry(id: number) {
     await fetch(`/api/downloads/${id}`, {
       method: "POST",
@@ -84,18 +102,32 @@ export default function DownloadProgress() {
     );
   }
 
+  const requeueBar = (
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+      <button className="btn btn-secondary btn-sm" onClick={handleRequeueMissing}>
+        Re-queue missing files
+      </button>
+      {requeueMsg && <span style={{ fontSize: "0.85rem", opacity: 0.75 }}>{requeueMsg}</span>}
+    </div>
+  );
+
   if (items.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-icon">↓</div>
-        <p className="empty-title">Nothing downloading</p>
-        <p className="empty-desc">Add a series from the search page to get started.</p>
-      </div>
+      <>
+        {requeueBar}
+        <div className="empty-state">
+          <div className="empty-icon">↓</div>
+          <p className="empty-title">Nothing downloading</p>
+          <p className="empty-desc">Add a series from the search page to get started.</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="table-wrap">
+    <>
+      {requeueBar}
+      <div className="table-wrap">
       {items.map((q) => {
         const livestate = live[q.id];
         const status = livestate?.status || q.status;
@@ -135,5 +167,6 @@ export default function DownloadProgress() {
         );
       })}
     </div>
+    </>
   );
 }
