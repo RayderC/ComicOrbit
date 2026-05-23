@@ -20,6 +20,17 @@ interface ContinueItem {
   page_count: number;
 }
 
+interface NextUpItem {
+  series_id: number;
+  series_title: string;
+  cover_path: string;
+  cover_updated_at: string;
+  type: string;
+  chapter_id: number;
+  chapter_number: number;
+  page_count: number;
+}
+
 interface RecentChapter {
   chapter_id: number;
   chapter_number: number;
@@ -45,6 +56,10 @@ interface RecommendedSeries {
   cover_path: string;
   cover_updated_at: string;
   status: string;
+}
+
+function formatChapter(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
 function ShelfCard({
@@ -153,6 +168,52 @@ export default async function Home() {
     `).all() as RecentChapter[];
   } catch { /* ignore */ }
 
+  // Next Up — Komga's "On Deck" semantics: series where the user finished at
+  // least one chapter, has no in-progress chapters, and at least one unread
+  // chapter remains. Each row points at the next unread chapter (smallest
+  // number) and the series is ordered by most-recent-read DESC.
+  // Mutually exclusive with Continue Reading by construction: any in-progress
+  // chapter (completed=0) disqualifies the series here.
+  let nextUp: NextUpItem[] = [];
+  try {
+    nextUp = db.prepare(`
+      WITH eligible AS (
+        SELECT c.series_id, MAX(p.updated_at) AS last_read_at
+        FROM read_progress p
+        JOIN chapters c ON c.id = p.chapter_id
+        WHERE p.user_id = ? AND p.completed = 1
+        GROUP BY c.series_id
+      ),
+      excluded AS (
+        SELECT DISTINCT c.series_id
+        FROM read_progress p
+        JOIN chapters c ON c.id = p.chapter_id
+        WHERE p.user_id = ? AND p.completed = 0
+      ),
+      next_chapter AS (
+        SELECT c.series_id, MIN(c.number) AS next_number
+        FROM chapters c
+        WHERE c.series_id IN (SELECT series_id FROM eligible)
+          AND c.series_id NOT IN (SELECT series_id FROM excluded)
+          AND c.id NOT IN (
+            SELECT p.chapter_id FROM read_progress p
+            WHERE p.user_id = ? AND p.completed = 1
+          )
+        GROUP BY c.series_id
+      )
+      SELECT
+        s.id AS series_id, s.title AS series_title,
+        s.cover_path, s.updated_at AS cover_updated_at, s.type,
+        c.id AS chapter_id, c.number AS chapter_number, c.page_count
+      FROM next_chapter nc
+      JOIN chapters c ON c.series_id = nc.series_id AND c.number = nc.next_number
+      JOIN series s ON s.id = nc.series_id
+      JOIN eligible e ON e.series_id = nc.series_id
+      ORDER BY e.last_read_at DESC
+      LIMIT 20
+    `).all(userId, userId, userId) as NextUpItem[];
+  } catch { /* ignore */ }
+
   let favorites: FavoriteSeries[] = [];
   try {
     favorites = db.prepare(`
@@ -192,7 +253,10 @@ export default async function Home() {
     `).all(userId, userId, userId) as RecommendedSeries[];
   } catch { /* ignore */ }
 
-  const isEmpty = continueReading.length === 0 && recentChapters.length === 0;
+  const isEmpty =
+    continueReading.length === 0 &&
+    nextUp.length === 0 &&
+    recentChapters.length === 0;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -215,6 +279,22 @@ export default async function Home() {
                     ? Math.round((item.page / (item.page_count - 1)) * 100)
                     : 100
                 }
+              />
+            ))}
+          </Shelf>
+        )}
+
+        {nextUp.length > 0 && (
+          <Shelf title="Next Up" viewAllHref="/library">
+            {nextUp.map((item) => (
+              <ShelfCard
+                key={item.series_id}
+                href={`/library/${item.series_id}/read/${item.chapter_id}`}
+                seriesId={item.series_id}
+                hasCover={!!item.cover_path}
+                coverUpdatedAt={item.cover_updated_at}
+                title={item.series_title}
+                subtitle={`Next: Ch. ${formatChapter(item.chapter_number)}`}
               />
             ))}
           </Shelf>
