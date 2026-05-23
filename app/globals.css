@@ -2718,6 +2718,24 @@ body > * { position: relative; z-index: 2; }
   opacity: 0.2;
 }
 
+/* "NEXT" badge shown on Next Up shelf cards */
+.shelf-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, var(--primary-light), var(--accent-cyan));
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.45);
+}
+
 .shelf-card-overlay {
   position: absolute;
   bottom: 0;

@@ -9,7 +9,7 @@
 
 ## Features
 
-- **Netflix-style home page** — Continue Reading, Recently Added, and Favorites rows
+- **Netflix-style home page** — Continue Reading, **Next Up**, Recently Added, Recommended, and Favorites rows
 - **Login-gated** — every page requires authentication; first launch auto-redirects to account setup
 - **Download from MangaDex, MangaFreak, and GetComics** — MangaFreak is the default manga source; parallel page downloads with live progress
 - **Built-in reader** — CBZ pages streamed from disk; tap left/right to turn pages, tap the middle to toggle the toolbar; keyboard arrows also work

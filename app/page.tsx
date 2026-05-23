@@ -70,6 +70,7 @@ function ShelfCard({
   title,
   subtitle,
   progressPct,
+  badge,
 }: {
   href: string;
   seriesId: number;
@@ -78,6 +79,7 @@ function ShelfCard({
   title: string;
   subtitle?: string;
   progressPct?: number;
+  badge?: string;
 }) {
   const coverSrc = `/api/cover/${seriesId}${coverUpdatedAt ? `?v=${encodeURIComponent(coverUpdatedAt)}` : ""}`;
   const seriesHref = `/library/${seriesId}`;
@@ -90,6 +92,7 @@ function ShelfCard({
           ) : (
             <div className="shelf-card-placeholder">◈</div>
           )}
+          {badge && <div className="shelf-card-badge">{badge}</div>}
           {progressPct !== undefined && (
             <div className="shelf-card-progress">
               <div className="shelf-card-progress-fill" style={{ width: `${progressPct}%` }} />
@@ -157,23 +160,12 @@ export default async function Home() {
     }).slice(0, 20);
   } catch { /* ignore */ }
 
-  let recentChapters: RecentChapter[] = [];
-  try {
-    recentChapters = db.prepare(`
-      SELECT c.id as chapter_id, c.number as chapter_number, c.series_id,
-             s.title as series_title, s.cover_path, s.updated_at as cover_updated_at
-      FROM chapters c
-      JOIN series s ON s.id = c.series_id
-      ORDER BY c.downloaded_at DESC LIMIT 20
-    `).all() as RecentChapter[];
-  } catch { /* ignore */ }
-
-  // Next Up — Komga's "On Deck" semantics: series where the user finished at
+  // "Next Up" — Komga's "On Deck" semantics: series where the user finished at
   // least one chapter, has no in-progress chapters, and at least one unread
   // chapter remains. Each row points at the next unread chapter (smallest
-  // number) and the series is ordered by most-recent-read DESC.
-  // Mutually exclusive with Continue Reading by construction: any in-progress
-  // chapter (completed=0) disqualifies the series here.
+  // number) ordered by most-recently-read DESC.
+  // Mutually exclusive with Continue Reading: any in-progress chapter
+  // (completed=0) disqualifies the whole series here.
   let nextUp: NextUpItem[] = [];
   try {
     nextUp = db.prepare(`
@@ -212,6 +204,17 @@ export default async function Home() {
       ORDER BY e.last_read_at DESC
       LIMIT 20
     `).all(userId, userId, userId) as NextUpItem[];
+  } catch { /* ignore */ }
+
+  let recentChapters: RecentChapter[] = [];
+  try {
+    recentChapters = db.prepare(`
+      SELECT c.id as chapter_id, c.number as chapter_number, c.series_id,
+             s.title as series_title, s.cover_path, s.updated_at as cover_updated_at
+      FROM chapters c
+      JOIN series s ON s.id = c.series_id
+      ORDER BY c.downloaded_at DESC LIMIT 20
+    `).all() as RecentChapter[];
   } catch { /* ignore */ }
 
   let favorites: FavoriteSeries[] = [];
@@ -285,7 +288,7 @@ export default async function Home() {
         )}
 
         {nextUp.length > 0 && (
-          <Shelf title="Next Up" viewAllHref="/library">
+          <Shelf title="Next Up" viewAllHref="/library" viewAllLabel="Browse library →">
             {nextUp.map((item) => (
               <ShelfCard
                 key={item.series_id}
@@ -295,6 +298,7 @@ export default async function Home() {
                 coverUpdatedAt={item.cover_updated_at}
                 title={item.series_title}
                 subtitle={`Next: Ch. ${formatChapter(item.chapter_number)}`}
+                badge="NEXT"
               />
             ))}
           </Shelf>
