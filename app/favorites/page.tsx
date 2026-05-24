@@ -8,6 +8,7 @@ import SeriesCard, { type Series } from "../components/SeriesCard";
 export default function FavoritesPage() {
   const router = useRouter();
   const [favorites, setFavorites] = useState<Series[]>([]);
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,7 +22,20 @@ export default function FavoritesPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch("/api/read/completed")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((ids: number[]) => setCompletedIds(new Set(ids)))
+      .catch(() => {});
   }, [router]);
+
+  function handleMarkAllRead(id: number, completed: boolean) {
+    setCompletedIds((prev) => {
+      const next = new Set(prev);
+      if (completed) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -41,7 +55,15 @@ export default function FavoritesPage() {
           <p style={{ color: "var(--text-muted)" }}>No favorites yet. Hit the star on any series to add it here.</p>
         ) : (
           <div className="series-grid">
-            {favorites.map((s) => <SeriesCard key={s.id} series={s} isFavorite />)}
+            {favorites.map((s) => (
+              <SeriesCard
+                key={s.id}
+                series={s}
+                isFavorite
+                isComplete={completedIds.has(s.id)}
+                onMarkAllRead={handleMarkAllRead}
+              />
+            ))}
           </div>
         )}
       </div>

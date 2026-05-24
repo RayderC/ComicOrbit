@@ -38,6 +38,7 @@ interface RecentChapter {
   series_title: string;
   cover_path: string;
   cover_updated_at: string;
+  is_completed: number;
 }
 
 interface FavoriteSeries {
@@ -47,6 +48,7 @@ interface FavoriteSeries {
   cover_path: string;
   cover_updated_at: string;
   status: string;
+  is_complete: number;
 }
 
 interface RecommendedSeries {
@@ -56,6 +58,7 @@ interface RecommendedSeries {
   cover_path: string;
   cover_updated_at: string;
   status: string;
+  is_complete: number;
 }
 
 function formatChapter(n: number): string {
@@ -71,6 +74,7 @@ function ShelfCard({
   subtitle,
   progressPct,
   badge,
+  isComplete,
 }: {
   href: string;
   seriesId: number;
@@ -80,6 +84,7 @@ function ShelfCard({
   subtitle?: string;
   progressPct?: number;
   badge?: string;
+  isComplete?: boolean;
 }) {
   const coverSrc = `/api/cover/${seriesId}${coverUpdatedAt ? `?v=${encodeURIComponent(coverUpdatedAt)}` : ""}`;
   const seriesHref = `/library/${seriesId}`;
@@ -93,6 +98,9 @@ function ShelfCard({
             <div className="shelf-card-placeholder">◈</div>
           )}
           {badge && <div className="shelf-card-badge">{badge}</div>}
+          {isComplete && (
+            <div className="series-card-complete-badge" title="All chapters read">✓</div>
+          )}
           {progressPct !== undefined && (
             <div className="shelf-card-progress">
               <div className="shelf-card-progress-fill" style={{ width: `${progressPct}%` }} />
@@ -210,29 +218,47 @@ export default async function Home() {
   try {
     recentChapters = db.prepare(`
       SELECT c.id as chapter_id, c.number as chapter_number, c.series_id,
-             s.title as series_title, s.cover_path, s.updated_at as cover_updated_at
+             s.title as series_title, s.cover_path, s.updated_at as cover_updated_at,
+             COALESCE(rp.completed, 0) as is_completed
       FROM chapters c
       JOIN series s ON s.id = c.series_id
+      LEFT JOIN read_progress rp ON rp.chapter_id = c.id AND rp.user_id = ?
       ORDER BY c.downloaded_at DESC LIMIT 20
-    `).all() as RecentChapter[];
+    `).all(userId) as RecentChapter[];
   } catch { /* ignore */ }
 
   let favorites: FavoriteSeries[] = [];
   try {
     favorites = db.prepare(`
-      SELECT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status
+      SELECT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status,
+             CASE
+               WHEN (SELECT COUNT(*) FROM chapters c WHERE c.series_id = s.id) > 0
+                AND (SELECT COUNT(*) FROM chapters c WHERE c.series_id = s.id)
+                  = (SELECT COUNT(*) FROM chapters c
+                     JOIN read_progress rp ON rp.chapter_id = c.id
+                     WHERE c.series_id = s.id AND rp.user_id = ? AND rp.completed = 1)
+               THEN 1 ELSE 0
+             END as is_complete
       FROM favorites f
       JOIN series s ON s.id = f.series_id
       WHERE f.user_id = ?
       ORDER BY f.created_at DESC LIMIT 20
-    `).all(userId) as FavoriteSeries[];
+    `).all(userId, userId) as FavoriteSeries[];
   } catch { /* ignore */ }
 
   // Recommended: series that share tags with read series, not yet started by this user
   let recommended: RecommendedSeries[] = [];
   try {
     recommended = db.prepare(`
-      SELECT DISTINCT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status
+      SELECT DISTINCT s.id, s.title, s.type, s.cover_path, s.updated_at as cover_updated_at, s.status,
+             CASE
+               WHEN (SELECT COUNT(*) FROM chapters c WHERE c.series_id = s.id) > 0
+                AND (SELECT COUNT(*) FROM chapters c WHERE c.series_id = s.id)
+                  = (SELECT COUNT(*) FROM chapters c
+                     JOIN read_progress rp ON rp.chapter_id = c.id
+                     WHERE c.series_id = s.id AND rp.user_id = ? AND rp.completed = 1)
+               THEN 1 ELSE 0
+             END as is_complete
       FROM series s
       JOIN series_tags st ON st.series_id = s.id
       WHERE st.tag IN (
@@ -253,7 +279,7 @@ export default async function Home() {
       )
       ORDER BY s.created_at DESC
       LIMIT 20
-    `).all(userId, userId, userId) as RecommendedSeries[];
+    `).all(userId, userId, userId, userId) as RecommendedSeries[];
   } catch { /* ignore */ }
 
   const isEmpty =
@@ -315,6 +341,7 @@ export default async function Home() {
                 coverUpdatedAt={ch.cover_updated_at}
                 title={ch.series_title}
                 subtitle={`Ch. ${ch.chapter_number}`}
+                isComplete={ch.is_completed === 1}
               />
             ))}
           </Shelf>
@@ -331,6 +358,7 @@ export default async function Home() {
                 coverUpdatedAt={s.cover_updated_at}
                 title={s.title}
                 subtitle={s.type}
+                isComplete={s.is_complete === 1}
               />
             ))}
           </Shelf>
@@ -347,6 +375,7 @@ export default async function Home() {
                 coverUpdatedAt={s.cover_updated_at}
                 title={s.title}
                 subtitle={s.type}
+                isComplete={s.is_complete === 1}
               />
             ))}
           </Shelf>
