@@ -3,6 +3,7 @@ import { getIronSession } from "iron-session";
 import { sessionOptions, User } from "../../../../lib/session";
 import { checkCsrf } from "../../../../lib/csrf";
 import db from "../../../../lib/db";
+import { syncAnilistProgress } from "../../../../lib/anilist";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 
@@ -41,6 +42,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   });
   txn();
+
+  // Sync completed read count to AniList when marking chapters as read.
+  // Fire-and-forget — don't let a sync failure block the response.
+  if (completed) {
+    const chaptersRead = (db.prepare(
+      "SELECT COUNT(*) as c FROM read_progress WHERE user_id = ? AND series_id = ? AND completed = 1"
+    ).get(session.user!.id, seriesId) as { c: number }).c;
+    syncAnilistProgress(session.user!.id, seriesId, chaptersRead).catch(() => {});
+  }
 
   res.json({ ok: true, count: chapters.length });
 }
