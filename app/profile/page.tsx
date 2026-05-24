@@ -21,6 +21,8 @@ export default function ProfilePage() {
   const [newAnilistToken, setNewAnilistToken] = useState("");
   const [anilistSaving, setAnilistSaving] = useState(false);
   const [anilistMsg, setAnilistMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [anilistHelpOpen, setAnilistHelpOpen] = useState(false);
+  const [anilistClientId, setAnilistClientId] = useState("");
 
   // Push notifications
   const [vapidKey, setVapidKey] = useState("");
@@ -216,10 +218,98 @@ export default function ProfilePage() {
         {/* AniList sync */}
         <div className="card" style={{ padding: "28px", marginBottom: "24px" }}>
           <h2 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "6px" }}>AniList Sync</h2>
-          <p style={{ fontSize: "12px", color: "var(--text-subtle)", marginBottom: "16px", lineHeight: 1.5 }}>
-            Auto-sync chapter completions to AniList. Generate a personal access token at{" "}
-            <a href="https://anilist.co/settings/developer" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-cyan)" }}>anilist.co/settings/developer</a>.
+          <p style={{ fontSize: "12px", color: "var(--text-subtle)", marginBottom: "12px", lineHeight: 1.5 }}>
+            Auto-sync chapter completions to your AniList account.
           </p>
+
+          {/* How-to guide */}
+          <button
+            type="button"
+            onClick={() => setAnilistHelpOpen((v) => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              fontSize: "12px", fontWeight: 600,
+              color: anilistHelpOpen ? "var(--accent-cyan)" : "var(--primary-light)",
+              background: "none", border: "none", cursor: "pointer", padding: "0",
+              marginBottom: anilistHelpOpen ? "0" : "16px",
+              transition: "color 0.15s",
+            }}
+          >
+            <span style={{ fontSize: "10px", transition: "transform 0.2s", display: "inline-block", transform: anilistHelpOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+            How do I get a token?
+          </button>
+
+          {anilistHelpOpen && (
+            <div style={{
+              margin: "12px 0 16px",
+              padding: "16px",
+              background: "rgba(168,85,247,0.06)",
+              border: "1px solid rgba(168,85,247,0.2)",
+              borderRadius: "8px",
+              fontSize: "12px",
+              lineHeight: 1.7,
+              color: "var(--text-subtle)",
+            }}>
+              <ol style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <li>
+                  Go to{" "}
+                  <a href="https://anilist.co/settings/developer" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-cyan)" }}>
+                    anilist.co/settings/developer
+                  </a>{" "}
+                  and click <strong style={{ color: "var(--text)" }}>Create new client</strong>.
+                </li>
+                <li>
+                  Set the <strong style={{ color: "var(--text)" }}>Redirect URL</strong> to exactly:
+                  <code style={{
+                    display: "block", marginTop: "6px",
+                    padding: "6px 10px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "5px",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "11px",
+                    wordBreak: "break-all",
+                    color: "var(--text)",
+                    userSelect: "all",
+                  }}>
+                    https://anilist.co/api/v2/oauth/pin
+                  </code>
+                </li>
+                <li>
+                  Save the client. Copy the <strong style={{ color: "var(--text)" }}>Client ID</strong>{" "}
+                  (the number shown under the app name — <em>not</em> the secret).
+                </li>
+                <li>
+                  Paste your Client ID below to generate your personal auth link:
+                  <div style={{ display: "flex", gap: "8px", marginTop: "8px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Client ID (e.g. 12345)"
+                      value={anilistClientId}
+                      onChange={(e) => setAnilistClientId(e.target.value.replace(/\D/g, ""))}
+                      style={{ fontFamily: "var(--font-mono)", fontSize: "12px", flex: 1 }}
+                    />
+                    {anilistClientId && (
+                      <a
+                        href={`https://anilist.co/api/v2/oauth/authorize?client_id=${anilistClientId}&response_type=token`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{ whiteSpace: "nowrap", fontSize: "12px", textDecoration: "none" }}
+                      >
+                        Open auth link ↗
+                      </a>
+                    )}
+                  </div>
+                </li>
+                <li>
+                  AniList will show you a long token — copy the whole thing and paste it into the field below.
+                </li>
+              </ol>
+            </div>
+          )}
+
           <form onSubmit={handleAnilistSave} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div>
               <label className="form-label" htmlFor="anilist-token">Personal access token</label>
