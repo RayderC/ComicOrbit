@@ -26,19 +26,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (chapters.length === 0) { res.json({ ok: true, count: 0 }); return; }
 
-  const upsert = db.prepare(`
-    INSERT INTO read_progress (user_id, series_id, chapter_id, page, completed, updated_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'))
-    ON CONFLICT(user_id, series_id, chapter_id) DO UPDATE SET
-      page = excluded.page,
-      completed = excluded.completed,
-      updated_at = datetime('now')
-  `);
-
   const txn = db.transaction(() => {
-    for (const ch of chapters) {
-      const page = isCompleted ? Math.max(0, ch.page_count - 1) : 0;
-      upsert.run(session.user!.id, seriesId, ch.id, page, isCompleted);
+    if (isCompleted) {
+      // Mark all read: upsert each chapter at its last page.
+      const upsert = db.prepare(`
+        INSERT INTO read_progress (user_id, series_id, chapter_id, page, completed, updated_at)
+        VALUES (?, ?, ?, ?, 1, datetime('now'))
+        ON CONFLICT(user_id, series_id, chapter_id) DO UPDATE SET
+          page = excluded.page,
+          completed = 1,
+          updated_at = datetime('now')
+      `);
+      for (const ch of chapters) {
+        upsert.run(session.user!.id, seriesId, ch.id, Math.max(0, ch.page_count - 1));
+      }
+    } else {
+      // Mark all unread: delete all progress rows for this series so chapters
+      // no longer appear in "Continue Reading" (which selects completed = 0 rows).
+      db.prepare(
+        "DELETE FROM read_progress WHERE user_id = ? AND series_id = ?"
+      ).run(session.user!.id, seriesId);
     }
   });
   txn();

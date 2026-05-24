@@ -35,21 +35,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const maxPage = ch.page_count > 0 ? ch.page_count : 9999;
     const p = Math.max(0, Math.min(Math.round(rawPage), maxPage));
 
-    db.prepare(`
-      INSERT INTO read_progress (user_id, series_id, chapter_id, page, completed, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(user_id, series_id, chapter_id) DO UPDATE SET
-        page = excluded.page,
-        completed = excluded.completed,
-        updated_at = datetime('now')
-    `).run(userId, ch.series_id, cId, p, completed ? 1 : 0);
-
-    // Fire-and-forget AniList sync when a chapter is completed.
     if (completed) {
+      // Mark as read: upsert with page + completed flag.
+      db.prepare(`
+        INSERT INTO read_progress (user_id, series_id, chapter_id, page, completed, updated_at)
+        VALUES (?, ?, ?, ?, 1, datetime('now'))
+        ON CONFLICT(user_id, series_id, chapter_id) DO UPDATE SET
+          page = excluded.page,
+          completed = 1,
+          updated_at = datetime('now')
+      `).run(userId, ch.series_id, cId, p);
+
+      // Fire-and-forget AniList sync when a chapter is completed.
       const chaptersRead = (db.prepare(
         "SELECT COUNT(*) as c FROM read_progress WHERE user_id = ? AND series_id = ? AND completed = 1"
       ).get(userId, ch.series_id) as { c: number }).c;
       syncAnilistProgress(userId, ch.series_id, chaptersRead).catch(() => {});
+    } else {
+      // Mark as unread: delete the record entirely so it no longer appears in
+      // "Continue Reading" (which selects all rows where completed = 0).
+      db.prepare(
+        "DELETE FROM read_progress WHERE user_id = ? AND series_id = ? AND chapter_id = ?"
+      ).run(userId, ch.series_id, cId);
     }
 
     res.json({ ok: true });
