@@ -14,7 +14,11 @@ RUN update-ca-certificates 2>/dev/null || true
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund
+# Under QEMU arm64 emulation, prebuild-install can download a prebuilt binary
+# for the wrong host arch and then fail with ENOEXEC when trying to run it.
+# Forcing --build-from-source makes npm compile native modules (better-sqlite3)
+# from scratch using the bundled build tools instead.
+RUN npm install --no-audit --no-fund --build-from-source
 
 # ---------- builder ----------
 FROM node:20-bookworm AS builder
