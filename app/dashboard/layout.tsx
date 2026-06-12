@@ -58,10 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside className={`sidebar${menuOpen ? " sidebar-open" : ""}`}>
         <div className="sidebar-logo-wrap">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Link href="/" className="sidebar-logo">ComicOrbit</Link>
-            <button className="sidebar-close" onClick={() => setMenuOpen(false)} aria-label="Close menu">✕</button>
-          </div>
+          <Link href="/" className="sidebar-logo">ComicOrbit</Link>
           <span className="sidebar-tag">Admin Dashboard</span>
         </div>
 

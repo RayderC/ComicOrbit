@@ -51,9 +51,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         "SELECT COUNT(*) as c FROM read_progress WHERE user_id = ? AND series_id = ? AND completed = 1"
       ).get(userId, ch.series_id) as { c: number }).c;
       syncAnilistProgress(userId, ch.series_id, chaptersRead).catch(() => {});
+    } else if (p > 0) {
+      // Save mid-chapter progress so reading position is preserved.
+      db.prepare(`
+        INSERT INTO read_progress (user_id, series_id, chapter_id, page, completed, updated_at)
+        VALUES (?, ?, ?, ?, 0, datetime('now'))
+        ON CONFLICT(user_id, series_id, chapter_id) DO UPDATE SET
+          page = excluded.page,
+          completed = 0,
+          updated_at = datetime('now')
+      `).run(userId, ch.series_id, cId, p);
     } else {
-      // Mark as unread: delete the record entirely so it no longer appears in
-      // "Continue Reading" (which selects all rows where completed = 0).
+      // page = 0 with completed = false means "mark as unread" — clear the record.
       db.prepare(
         "DELETE FROM read_progress WHERE user_id = ? AND series_id = ? AND chapter_id = ?"
       ).run(userId, ch.series_id, cId);

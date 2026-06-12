@@ -88,6 +88,14 @@ export default function ReaderViewer({
       } else {
         setPending("next");
       }
+    } else {
+      // Last page of last chapter — return to series on double-tap.
+      if (pendingNavRef.current === "next") {
+        setPending(null);
+        router.push(`/library/${seriesId}`);
+      } else {
+        setPending("next");
+      }
     }
   }, [page, total, nextChapterId, router, seriesId, setPending]);
 
@@ -197,7 +205,9 @@ export default function ReaderViewer({
       letterSpacing: "0.03em",
       whiteSpace: "nowrap",
     }}>
-      {pendingNav === "next" ? "Tap again for Next Chapter →" : "← Tap again for Previous Chapter"}
+      {pendingNav === "next"
+        ? (!nextChapterId && page >= total - 1 ? "Tap again to go back to series" : "Tap again for Next Chapter →")
+        : "← Tap again for Previous Chapter"}
     </div>
   ) : null;
 
