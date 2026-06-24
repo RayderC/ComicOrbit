@@ -6,7 +6,7 @@
     "dev": "next dev -p 7080",
     "build": "next build",
     "start": "next start -p 7080",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

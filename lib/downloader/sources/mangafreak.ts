@@ -160,7 +160,7 @@ export const mangafreakSource: Source = {
   },
 
   async fetchChapter(ref: ChapterRef, onProgress: ProgressFn, signal): Promise<ChapterPayload> {
-    let urls: string[] = [];
+    const urls: string[] = [];
     // officialPageCount comes from MangaFreak's own page-selector dropdown.
     // It reflects only real manga pages — promotional images beyond this count are excluded.
     let officialPageCount = 0;
