@@ -50,20 +50,28 @@ export default function Login() {
       username: { value: string };
       password: { value: string };
     };
-    const res = await fetch("/api/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: form.username.value.trim().toLowerCase(),
-        password: form.password.value,
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
-    setLoading(false);
-    if (res.ok) {
-      router.push("/");
-    } else {
-      setError((await res.json()).message || "Login failed");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        body: JSON.stringify({
+          username: form.username.value.trim().toLowerCase(),
+          password: form.password.value,
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        // Must be a full page load, not router.push: while logged out, the router
+        // cached a prefetch of "/" that redirects to /login, and a client-side
+        // navigation would replay it and strand the now-logged-in user here.
+        window.location.assign("/");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      setError(data?.message || "Login failed");
+    } catch {
+      setError("Couldn't reach the server. Please try again.");
     }
+    setLoading(false);
   }
 
   return (
