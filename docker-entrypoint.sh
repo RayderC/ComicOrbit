@@ -2,18 +2,9 @@
 set -e
 
 CONFIG_DIRECTORY="${CONFIG_DIRECTORY:-/config}"
-MANGA_DIRECTORY="${MANGA_DIRECTORY:-/Manga}"
 SECRET_FILE="$CONFIG_DIRECTORY/.session_secret"
 
-# Starts as root only to make the data folders writable, since a bind-mounted folder is usually
-# owned by root. The app itself then runs as the unprivileged node user.
-if [ "$(id -u)" = "0" ]; then
-  mkdir -p "$CONFIG_DIRECTORY" "$MANGA_DIRECTORY"
-  find "$CONFIG_DIRECTORY" "$MANGA_DIRECTORY" ! -user node -exec chown node:node {} + || echo "Warning: couldn't take ownership of the data folders" >&2
-  exec setpriv --reuid=node --regid=node --init-groups "$0" "$@"
-fi
-
-mkdir -p "$CONFIG_DIRECTORY"
+mkdir -p "$CONFIG_DIRECTORY" /Manga /Comics
 
 # The example compose file used to ship one fixed secret. Anyone who has read it could forge a
 # login cookie for any install still using it, so it gets replaced with a random one.

@@ -58,9 +58,8 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # Strip Windows CRLF line endings so the shebang works on Linux
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p /config /Manga && chown node:node /config /Manga
+    && mkdir -p /config /Manga
 
 EXPOSE 7080
 
-# No USER line: docker-entrypoint.sh fixes the data folders' ownership as root, then drops to the node user.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
