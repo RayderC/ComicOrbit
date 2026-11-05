@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db from "../../../lib/db";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { syncAnilistProgress } from "../../../lib/anilist";
+import { checkCsrf } from "../../../lib/csrf";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user) {
     res.status(401).json({ message: "Login required" });
     return;
@@ -15,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = session.user.id;
 
   if (req.method === "POST") {
+    if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
     const { chapter_id, page, completed } = req.body ?? {};
     const cId = Number(chapter_id);
     if (!Number.isFinite(cId)) {

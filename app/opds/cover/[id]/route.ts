@@ -3,7 +3,7 @@ import { authenticateBasic, BASIC_CHALLENGE } from "@/lib/basicAuth";
 import fs from "fs";
 import path from "path";
 import db, { getSiteConfig } from "@/lib/db";
-import { isSafeExternalUrlResolved } from "@/lib/safeUrl";
+import { safeFetch } from "@/lib/safeUrl";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ function isPathWithinAllowedDirs(filePath: string): boolean {
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const user = authenticateBasic(req.headers.get("authorization"));
+  const user = await authenticateBasic(req);
   if (!user) {
     return new NextResponse("Authentication required", {
       status: 401,
@@ -41,20 +41,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const cover = row.cover_path;
 
   if (/^https?:\/\//i.test(cover)) {
-    if (!(await isSafeExternalUrlResolved(cover))) return new NextResponse("invalid cover url", { status: 400 });
     try {
-      const upstream = await fetch(cover, {
-        signal: AbortSignal.timeout(15_000),
+      const { buffer, contentType } = await safeFetch(cover, {
+        maxBytes: 10 * 1024 * 1024,
+        timeoutMs: 15_000,
         headers: {
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
           "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
         },
       });
-      if (!upstream.ok) return new NextResponse("upstream cover failed", { status: 502 });
-      const ct = upstream.headers.get("content-type")?.split(";")[0].trim() || "";
-      if (!SAFE_IMAGE_TYPES.has(ct)) return new NextResponse("non-image", { status: 502 });
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": ct, "Cache-Control": "private, max-age=300" } });
+      if (!SAFE_IMAGE_TYPES.has(contentType)) return new NextResponse("non-image", { status: 502 });
+      return new NextResponse(new Uint8Array(buffer), { headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=300" } });
     } catch {
       return new NextResponse("proxy failed", { status: 502 });
     }

@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db, { adminCount } from "../../../lib/db";
 import bcrypt from "bcryptjs";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { checkCsrf } from "../../../lib/csrf";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
@@ -10,7 +9,7 @@ export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) {
     res.status(403).json({ message: "Forbidden" });
     return;
@@ -54,8 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (password && typeof password === "string") {
-      if (password.length < 8 || password.length > 200) {
-        res.status(400).json({ message: "Password must be 8–200 characters" });
+      if (password.length < 8 || password.length > 72) {
+        res.status(400).json({ message: "Password must be 8–72 characters" });
         return;
       }
       hashedPassword = bcrypt.hashSync(password, 10);
@@ -81,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sets: string[] = [];
       const vals: unknown[] = [];
       if (cleanUsername !== undefined) { sets.push("username = ?"); vals.push(cleanUsername); }
-      if (hashedPassword !== undefined) { sets.push("password = ?"); vals.push(hashedPassword); }
+      if (hashedPassword !== undefined) { sets.push("password = ?", "token_version = token_version + 1"); vals.push(hashedPassword); }
       if (typeof isAdmin === "boolean") { sets.push("is_admin = ?"); vals.push(isAdmin ? 1 : 0); }
 
       try {
@@ -95,6 +94,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (result === "not_found") { res.status(404).json({ message: "User not found" }); return; }
     if (result === "last_admin") { res.status(400).json({ message: "Cannot remove admin from the last remaining admin" }); return; }
     if (result === "username_taken") { res.status(400).json({ message: "Username already taken" }); return; }
+
+    // An admin resetting their own password here would otherwise be signed out on their next request.
+    if (hashedPassword !== undefined && id === session.user.id) {
+      session.user.v = (session.user.v ?? 0) + 1;
+      await session.save();
+    }
 
     res.json({ ok: true });
     return;

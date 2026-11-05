@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db, { getSiteConfig } from "../../../lib/db";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { checkCsrf } from "../../../lib/csrf";
 import fs from "fs";
 import path from "path";
@@ -17,11 +16,10 @@ function getAllowedSeriesDirs(): string[] {
   return [cfg.MANGA_DIRECTORY || "/Manga"].map((d) => path.resolve(d));
 }
 
+// The library root itself never counts: deleting one series mustn't be able to delete everything.
 function isSeriesFolderSafe(folder: string): boolean {
   const resolved = path.resolve(folder);
-  return getAllowedSeriesDirs().some(
-    (dir) => resolved.startsWith(dir + path.sep) || resolved === dir
-  );
+  return getAllowedSeriesDirs().some((dir) => resolved.startsWith(dir + path.sep));
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -32,6 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "GET") {
+    // The whole app is login-gated, and this response includes the server's folder path.
+    const viewer = await getApiSession(req, res);
+    if (!viewer.user) { res.status(401).json({ message: "Login required" }); return; }
     const row = db.prepare(`
       SELECT id, slug, title, type, source, source_url, description, cover_path, status, one_shot, series_folder, reading_mode, created_at, updated_at
       FROM series WHERE id = ?
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) {
     res.status(403).json({ message: "Forbidden" });
     return;

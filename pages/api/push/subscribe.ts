@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import db from "../../../lib/db";
 import { ensureVapidKeys } from "../../../lib/webpush";
 import { checkCsrf } from "../../../lib/csrf";
@@ -10,24 +9,18 @@ export const config = { api: { bodyParser: { sizeLimit: "8kb" } } };
 // Only accept push endpoints from real browser push services. Without this an
 // attacker could register their own URL and the server would make VAPID-signed
 // POSTs to it on every push event (SSRF + signed-request abuse).
-const ALLOWED_PUSH_HOSTS = [
-  /\.googleapis\.com$/,                 // FCM
-  /\.push\.services\.mozilla\.com$/,    // Firefox Autopush
-  /^web\.push\.apple\.com$/,            // Safari / iOS
-  /\.notify\.windows\.com$/,            // Edge legacy
-  /\.windows\.com$/,                    // Edge fallback
-];
+const PUSH_HOSTS = ["fcm.googleapis.com", "android.googleapis.com", "push.services.mozilla.com", "notify.windows.com", "push.apple.com"];
 
 function isAllowedPushEndpoint(endpoint: string): boolean {
   let url: URL;
   try { url = new URL(endpoint); } catch { return false; }
   if (url.protocol !== "https:") return false;
   const host = url.hostname.toLowerCase();
-  return ALLOWED_PUSH_HOSTS.some((re) => re.test(host));
+  return PUSH_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user) { res.status(401).json({ message: "Login required" }); return; }
 
   if (req.method === "GET") {
@@ -42,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "POST") {
     const { endpoint, keys } = req.body ?? {};
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    if (!endpoint || typeof keys?.p256dh !== "string" || typeof keys?.auth !== "string" || keys.p256dh.length > 300 || keys.auth.length > 300) {
       res.status(400).json({ message: "Invalid subscription object" });
       return;
     }

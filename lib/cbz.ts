@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import yauzl, { ZipFile, Entry } from "yauzl";
 
 const IMG_EXT = /\.(jpg|jpeg|png|webp|gif)$/i;
@@ -28,7 +28,7 @@ export async function writeCbz(
 
   await new Promise<void>((resolve, reject) => {
     const out = fs.createWriteStream(tmpPath);
-    const archive = archiver("zip", { zlib: { level: 0 } }); // images don't compress; stay fast
+    const archive = new ZipArchive({ zlib: { level: 0 } }); // images don't compress; stay fast
 
     out.on("close", () => resolve());
     out.on("error", reject);

@@ -15,7 +15,7 @@ function isInsideAllowedDirs(filePath: string): boolean {
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ chapterId: string }> }) {
-  const user = authenticateBasic(req.headers.get("authorization"));
+  const user = await authenticateBasic(req);
   if (!user) {
     return new NextResponse("Authentication required", {
       status: 401,
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ chapterId: 
   return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": CBZ_MIME,
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${filename.replace(/[^\x20-\x7e]|"/g, "_")}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "private, max-age=300",
     },
   });

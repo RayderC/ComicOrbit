@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { siteConfig as defaults } from "../../lib/siteConfig";
+import TabBar, { type Tab } from "./TabBar";
 
 export default function Navigation() {
   const pathname = usePathname() ?? "";
@@ -50,19 +51,20 @@ export default function Navigation() {
     ...(isAdmin ? [{ href: "/dashboard", label: "Dashboard", active: pathname.startsWith("/dashboard") }] : []),
   ];
 
+  const tabs: Tab[] = [
+    { label: "Home", icon: "home", href: "/", active: pathname === "/" },
+    { label: "Library", icon: "book", href: "/library", active: pathname.startsWith("/library") },
+    ...(isLoggedIn ? [
+      { label: "Favorites", icon: "star", href: "/favorites", active: pathname.startsWith("/favorites") },
+      { label: "Stats", icon: "chart", href: "/stats", active: pathname.startsWith("/stats") },
+      { label: "More", icon: "menu", active: drawerOpen || pathname.startsWith("/profile"), onClick: () => setDrawerOpen(true) },
+    ] : []),
+  ];
+
   return (
     <>
       <nav className="nav">
         <div className="nav-inner">
-          {/* Mobile hamburger — left side */}
-          <button
-            className="nav-hamburger"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open menu"
-          >
-            <span /><span /><span />
-          </button>
-
           <Link href="/" className="nav-logo">{siteName}</Link>
 
           {/* Desktop links */}
@@ -92,6 +94,8 @@ export default function Navigation() {
           </div>
         </div>
       </nav>
+
+      <TabBar tabs={tabs} />
 
       {/* Mobile drawer backdrop */}
       {drawerOpen && (

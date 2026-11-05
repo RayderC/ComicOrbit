@@ -22,7 +22,7 @@ export interface SeriesMetadata {
 }
 
 export interface ChapterRef {
-  // External chapter identifier (e.g. a URL or a MangaDex chapter id).
+  // External chapter identifier (the chapter page URL).
   externalId: string;
   number: number;
   title?: string;

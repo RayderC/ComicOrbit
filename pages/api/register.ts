@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db from "../../lib/db";
 import bcrypt from "bcryptjs";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../lib/session";
+import { getApiSession } from "../../lib/auth";
 import { checkRateLimit } from "../../lib/rateLimit";
 import { checkCsrf } from "../../lib/csrf";
+import { clientIp } from "../../lib/clientIp";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 
@@ -17,14 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
   // 20 registrations per 10 minutes per IP (admin-only but still limit spam).
-  const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim()
-    || req.socket.remoteAddress || "unknown";
-  if (!checkRateLimit(`register:${ip}`, 20, 10 * 60_000)) {
+  if (!checkRateLimit(`register:${clientIp(req)}`, 20, 10 * 60_000)) {
     res.status(429).json({ message: "Too many requests. Try again later." });
     return;
   }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) {
     res.status(403).json({ message: "Only an administrator may create accounts" });
     return;
@@ -54,8 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(400).json({ message: "Password must be at least 8 characters" });
     return;
   }
-  if (password.length > 200) {
-    res.status(400).json({ message: "Password must be under 200 characters" });
+  if (password.length > 72) {
+    res.status(400).json({ message: "Password must be 72 characters or fewer" });
     return;
   }
 

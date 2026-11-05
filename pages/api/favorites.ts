@@ -1,13 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db from "../../lib/db";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../lib/session";
+import { getApiSession } from "../../lib/auth";
 import { checkCsrf } from "../../lib/csrf";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user) {
     res.status(401).json({ message: "Login required" });
     return;
@@ -29,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
     const id = Number((req.body ?? {}).series_id);
     if (!Number.isFinite(id)) { res.status(400).json({ message: "series_id required" }); return; }
+    if (!db.prepare("SELECT 1 FROM series WHERE id = ?").get(id)) { res.status(404).json({ message: "Series not found" }); return; }
     db.prepare("INSERT OR IGNORE INTO favorites (user_id, series_id) VALUES (?, ?)").run(userId, id);
     res.json({ ok: true });
     return;

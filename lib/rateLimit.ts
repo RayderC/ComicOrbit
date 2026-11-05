@@ -28,3 +28,9 @@ export function checkRateLimit(key: string, limit: number, windowMs: number): bo
   entry.count++;
   return true;
 }
+
+/** Whether a key is already at its limit, without counting this as another attempt. */
+export function isRateLimited(key: string, limit: number): boolean {
+  const entry = store.get(key);
+  return !!entry && Date.now() <= entry.resetAt && entry.count >= limit;
+}

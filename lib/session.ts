@@ -1,6 +1,7 @@
 import { SessionOptions } from "iron-session";
 
-export type User = { id: number; username: string; isAdmin?: boolean };
+/** `v` is the account's token_version at sign-in. Changing a password bumps it, which ends other sessions. */
+export type User = { id: number; username: string; isAdmin?: boolean; v?: number };
 
 declare module "iron-session" {
   interface IronSessionData {

@@ -1,10 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db from "../../lib/db";
 import bcrypt from "bcryptjs";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../lib/session";
+import { getApiSession } from "../../lib/auth";
+import { checkCsrf } from "../../lib/csrf";
+import { clientIp } from "../../lib/clientIp";
 import { verifyWerkzeugHash } from "../../lib/legacyPassword";
 import { checkRateLimit } from "../../lib/rateLimit";
+
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -12,35 +15,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  // 10 attempts per minute per IP — validate forwarded-for to prevent header spoofing.
-  const forwarded = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? "";
-  const validIp = /^(?:\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i.test(forwarded) ? forwarded : null;
-  const ip = validIp || req.socket.remoteAddress || "unknown";
-  if (!checkRateLimit(`login:${ip}`, 10, 60_000)) {
+  if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
+
+  // 10 attempts per minute per IP.
+  if (!checkRateLimit(`login:${clientIp(req)}`, 10, 60_000)) {
     res.status(429).json({ message: "Too many login attempts. Try again in a minute." });
     return;
   }
 
   const { username, password } = req.body ?? {};
-  if (!username || !password) {
+  if (typeof username !== "string" || typeof password !== "string" || !username || !password) {
     res.status(400).json({ message: "Missing field(s)" });
     return;
   }
 
+  const name = username.toLowerCase();
+  // A per-account limit too, so guessing one password from many addresses still gets slowed down.
+  if (!checkRateLimit(`login-user:${name}`, 30, 10 * 60_000)) {
+    res.status(429).json({ message: "Too many login attempts. Try again in a minute." });
+    return;
+  }
+
   const row = db
-    .prepare("SELECT id, username, password, legacy_password, is_admin FROM users WHERE LOWER(username) = ?")
-    .get(String(username).toLowerCase()) as
-    | { id: number; username: string; password: string; legacy_password: string; is_admin: number }
+    .prepare("SELECT id, username, password, legacy_password, is_admin, token_version FROM users WHERE LOWER(username) = ?")
+    .get(name) as
+    | { id: number; username: string; password: string; legacy_password: string; is_admin: number; token_version: number }
     | undefined;
 
   if (!row) {
+    // Takes as long as a wrong password, so response time doesn't reveal which usernames exist.
+    await bcrypt.compare(password, DUMMY_HASH);
     res.status(400).json({ message: "Invalid credentials" });
     return;
   }
 
   let authed = false;
 
-  if (row.password && bcrypt.compareSync(password, row.password)) {
+  if (row.password && await bcrypt.compare(password, row.password)) {
     authed = true;
   } else if (row.legacy_password && verifyWerkzeugHash(row.legacy_password, password)) {
     const hash = bcrypt.hashSync(password, 10);
@@ -53,8 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
-  session.user = { id: row.id, username: row.username, isAdmin: row.is_admin === 1 };
+  const session = await getApiSession(req, res);
+  session.user = { id: row.id, username: row.username, isAdmin: row.is_admin === 1, v: row.token_version };
   await session.save();
 
   res.json({ ok: true, user: session.user });

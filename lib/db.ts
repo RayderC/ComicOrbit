@@ -126,6 +126,7 @@ const migrations = [
   `ALTER TABLE download_queue ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))`,
   `ALTER TABLE users ADD COLUMN anilist_token TEXT NOT NULL DEFAULT ''`,
   `ALTER TABLE series ADD COLUMN anilist_id INTEGER`,
+  `ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`,
   `CREATE TABLE IF NOT EXISTS push_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,

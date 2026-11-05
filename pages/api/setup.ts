@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db, { userCount } from "../../lib/db";
 import bcrypt from "bcryptjs";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../lib/session";
+import { getApiSession } from "../../lib/auth";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { checkCsrf } from "../../lib/csrf";
+import { clientIp } from "../../lib/clientIp";
 
 export const config = { api: { bodyParser: { sizeLimit: "16kb" } } };
 
@@ -18,10 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
+
   // 5 attempts per hour per IP — setup is one-time, no need for more.
-  const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim()
-    || req.socket.remoteAddress || "unknown";
-  if (!checkRateLimit(`setup:${ip}`, 5, 60 * 60_000)) {
+  if (!checkRateLimit(`setup:${clientIp(req)}`, 5, 60 * 60_000)) {
     res.status(429).json({ message: "Too many requests. Try again later." });
     return;
   }
@@ -35,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(400).json({ message: "Password must be at least 8 characters" });
     return;
   }
-  if (password.length > 200) {
-    res.status(400).json({ message: "Password must be under 200 characters" });
+  if (password.length > 72) {
+    res.status(400).json({ message: "Password must be 72 characters or fewer" });
     return;
   }
 
@@ -62,8 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
-  session.user = { id: result.lastInsertRowid as number, username: cleanUsername, isAdmin: true };
+  const session = await getApiSession(req, res);
+  session.user = { id: result.lastInsertRowid as number, username: cleanUsername, isAdmin: true, v: 0 };
   await session.save();
 
   res.json({ ok: true });

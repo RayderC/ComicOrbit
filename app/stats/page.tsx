@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getPageSession } from "@/lib/authServer";
 import db from "@/lib/db";
 import Navigation from "../components/Navigation";
 import Link from "next/link";
@@ -9,7 +7,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
-  const session = await getIronSession<{ user?: User }>(await cookies(), sessionOptions);
+  const session = await getPageSession();
   if (!session.user) redirect("/login");
   const userId = session.user.id;
 

@@ -3,8 +3,8 @@ import fs from "fs";
 import db, { getSiteConfig } from "../db";
 import { writeCbz, countCbzPages } from "../cbz";
 import { sanitizeFsName } from "../url";
-import { isSafeExternalUrlResolved } from "../safeUrl";
-import { getSource } from "./sources";
+import { safeFetch } from "../safeUrl";
+import { getSource, SOURCES } from "./sources";
 import { publish, remove } from "./progress";
 import { enqueueChapterNotification } from "../notificationOutbox";
 import { buildComicInfoXml } from "../comicinfo";
@@ -44,7 +44,15 @@ async function loop() {
     try {
       const job = nextJob();
       if (job) {
-        await runJob(job);
+        try {
+          await runJob(job);
+        } catch (e) {
+          // Without this, a job that throws (say, an unwritable folder) is picked up again
+          // forever and blocks everything queued behind it.
+          console.error(`[downloader] job ${job.id} failed:`, e);
+          aborts.delete(job.id);
+          setStatus(job.id, { status: "error", error_message: (e as Error).message || "Download failed" });
+        }
       } else {
         await sleep(POLL_MS);
       }
@@ -137,37 +145,20 @@ async function downloadCoverIfMissing(s: SeriesRow, folder: string, cover?: stri
     }
     return;
   }
-  if (!(await isSafeExternalUrlResolved(cover))) {
-    console.warn(`[downloader] refusing to fetch cover from unsafe URL: ${cover}`);
-    return;
-  }
   try {
-    const r = await fetch(cover, {
+    const { buffer, contentType } = await safeFetch(cover, {
+      maxBytes: MAX_COVER_BYTES,
+      timeoutMs: 15_000,
       headers: {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
       },
-      signal: AbortSignal.timeout(15_000),
-      redirect: "follow",
     });
-    if (!r.ok) return;
-    const ct = (r.headers.get("content-type") || "").split(";")[0].trim();
-    if (!ct.startsWith("image/")) {
-      console.warn(`[downloader] cover fetch returned non-image content-type "${ct}" for ${cover}`);
+    if (!contentType.startsWith("image/")) {
+      console.warn(`[downloader] cover fetch returned non-image content-type "${contentType}" for ${cover}`);
       return;
     }
-    // Reject oversized covers before buffering to prevent memory exhaustion.
-    const contentLength = Number(r.headers.get("content-length") || "0");
-    if (contentLength > MAX_COVER_BYTES) {
-      console.warn(`[downloader] cover too large (${contentLength} bytes) for ${cover}`);
-      return;
-    }
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.length > MAX_COVER_BYTES) {
-      console.warn(`[downloader] cover too large after download (${buf.length} bytes) for ${cover}`);
-      return;
-    }
-    fs.writeFileSync(target, buf);
+    fs.writeFileSync(target, buffer);
     db.prepare("UPDATE series SET cover_path = ? WHERE id = ?").run(target, s.id);
   } catch (e) {
     console.warn("[downloader] cover fetch failed:", (e as Error).message);
@@ -258,6 +249,8 @@ async function runJob(job: QueueRow): Promise<void> {
   aborts.set(job.id, controller);
 
   let completed = 0;
+  let failed = 0;
+  let lastError = "";
   for (const ch of todo) {
     if (controller.signal.aborted) {
       setStatus(job.id, { status: "paused", current_chapter: "cancelled" });
@@ -332,10 +325,14 @@ async function runJob(job: QueueRow): Promise<void> {
         if (stat.size < 100) {
           console.warn(`[downloader] chapter ${ch.number} file too small (${stat.size} bytes), skipping`);
           try { fs.unlinkSync(finalTarget); } catch { /* ignore */ }
+          failed++;
+          lastError = `Chapter ${ch.number} came back empty`;
           continue;
         }
       } catch {
         console.warn(`[downloader] chapter ${ch.number} file stat failed, skipping`);
+        failed++;
+        lastError = `Chapter ${ch.number} couldn't be saved`;
         continue;
       }
 
@@ -351,8 +348,7 @@ async function runJob(job: QueueRow): Promise<void> {
 
       completed++;
 
-      // Brief pause between chapters so we don't saturate per-source rate limits
-      // (e.g. MangaDex at-home server allows ~40 lookups/min).
+      // Brief pause between chapters so we don't saturate the source's rate limits.
       if (completed < todo.length) await sleep(1500);
     } catch (e) {
       if ((e as { name?: string }).name === "AbortError") {
@@ -362,12 +358,23 @@ async function runJob(job: QueueRow): Promise<void> {
       }
       const msg = (e as Error).message || String(e);
       console.error(`[downloader] chapter ${ch.number} failed:`, msg);
+      failed++;
+      lastError = `Chapter ${ch.number}: ${msg}`;
       // Move on to the next chapter instead of failing the whole series.
       // (User can see partial progress and retry.)
     }
   }
 
   aborts.delete(job.id);
+  if (failed > 0) {
+    // Report it, so the queue doesn't say "complete" with chapters missing. Retrying only fetches what's missing.
+    setStatus(job.id, {
+      status: "error",
+      error_message: `${failed} of ${todo.length} chapters failed. ${lastError}`.slice(0, 500),
+      current_chapter: `${completed} of ${todo.length} downloaded`,
+    });
+    return;
+  }
   setStatus(job.id, { status: "done", progress_pct: 100, current_chapter: "complete" });
 }
 
@@ -393,11 +400,13 @@ export async function scanAllSeries(): Promise<void> {
   const allSeries = db.prepare(
     "SELECT id, source, source_url FROM series WHERE source_url != ''"
   ).all() as { id: number; source: string; source_url: string }[];
+  // Series from a source that was removed stay readable; there's just nothing to check them against.
+  const scannable = allSeries.filter((s) => SOURCES[s.source]);
 
-  console.log(`[downloader] scanning ${allSeries.length} series for new chapters`);
+  console.log(`[downloader] scanning ${scannable.length} series for new chapters`);
   let queued = 0;
 
-  for (const s of allSeries) {
+  for (const s of scannable) {
     const existing = db.prepare(
       "SELECT id FROM download_queue WHERE series_id = ? AND status IN ('queued', 'downloading')"
     ).get(s.id);

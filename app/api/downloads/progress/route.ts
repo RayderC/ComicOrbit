@@ -1,49 +1,37 @@
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getVerifiedSession } from "@/lib/authServer";
 import { subscribe, snapshot } from "@/lib/downloader/progress";
-
-type SessionData = { user?: User };
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+  const session = await getVerifiedSession();
   if (!session.user?.isAdmin) {
     return new Response("Forbidden", { status: 403 });
   }
 
+  let cleanup = () => {};
+
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
-      const send = (data: unknown) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      const write = (chunk: string) => {
+        try { controller.enqueue(encoder.encode(chunk)); } catch { cleanup(); }
       };
 
-      // Initial snapshot.
-      send(snapshot());
-
-      const unsubscribe = subscribe((snap) => send(snap));
+      write(`data: ${JSON.stringify(snapshot())}\n\n`);
+      const unsubscribe = subscribe((snap) => write(`data: ${JSON.stringify(snap)}\n\n`));
 
       // Keep the connection warm with a periodic comment line.
-      const ping = setInterval(() => {
-        try { controller.enqueue(encoder.encode(": ping\n\n")); } catch { /* closed */ }
-      }, 15000);
+      const ping = setInterval(() => write(": ping\n\n"), 15000);
 
-      const close = () => {
+      cleanup = () => {
         clearInterval(ping);
         unsubscribe();
-        try { controller.close(); } catch { /* already closed */ }
       };
-
-      // The Next runtime aborts the request on disconnect via the stream's
-      // `cancel`; we wire cleanup there.
-      (controller as unknown as { __close?: () => void }).__close = close;
     },
     cancel() {
-      const c = (this as unknown as { __close?: () => void }).__close;
-      if (c) c();
+      cleanup();
     },
   });
 

@@ -11,7 +11,7 @@
 
 - **Netflix-style home page** — Continue Reading, **Next Up**, Recently Added, Recommended, and Favorites rows
 - **Login-gated** — every page requires authentication; first launch auto-redirects to account setup
-- **Download from MangaDex, MangaFreak, and GetComics** — MangaFreak is the default manga source; parallel page downloads with live progress
+- **Download from MangaFreak** — parallel page downloads with live progress
 - **Built-in reader** — CBZ pages streamed from disk; tap left/right to turn pages, tap the middle to toggle the toolbar; keyboard arrows also work
 - **Per-user read progress** — picks up exactly where you left off
 - **Favorites & custom collections** — star series and group them however you want
@@ -63,9 +63,7 @@ On first launch you'll be redirected to the **setup page** to create the admin a
 
 | Source | Content | Method |
 |---|---|---|
-| **MangaFreak** | Manga | HTML scraping — default manga source |
-| **MangaDex** | Manga | Official REST API — English chapters |
-| **GetComics** | Western comics | Scrapes direct CBZ/CBR download links |
+| **MangaFreak** | Manga | HTML scraping |
 
 ---
 

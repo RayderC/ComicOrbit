@@ -2,8 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import db, { getSiteConfig } from "../../../lib/db";
 import fs from "fs";
 import path from "path";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { checkCsrf } from "../../../lib/csrf";
 
 function getAllowedChapterDirs(): string[] {
@@ -23,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
 
   const id = Number(req.query.id);

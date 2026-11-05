@@ -1,7 +1,7 @@
 # ---------- deps ----------
 # Using the full node image (not -slim) so build tools for better-sqlite3's
 # native binding are already installed — no apt-get needed during build.
-FROM node:20-bookworm AS deps
+FROM node:24-bookworm AS deps
 WORKDIR /app
 
 # Inject any extra root CAs that may be needed by the build environment to
@@ -21,7 +21,7 @@ COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund --build-from-source
 
 # ---------- builder ----------
-FROM node:20-bookworm AS builder
+FROM node:24-bookworm AS builder
 WORKDIR /app
 
 COPY build-certs/ /usr/local/share/ca-certificates/
@@ -38,7 +38,7 @@ RUN npm run build
 
 # ---------- runner ----------
 # -slim is fine for the runner — no native compilation happens here.
-FROM node:20-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -58,8 +58,9 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # Strip Windows CRLF line endings so the shebang works on Linux
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p /config /Manga
+    && mkdir -p /config /Manga && chown node:node /config /Manga
 
 EXPOSE 7080
 
+# No USER line: docker-entrypoint.sh fixes the data folders' ownership as root, then drops to the node user.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

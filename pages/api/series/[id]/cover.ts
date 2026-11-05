@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../../lib/session";
+import { getApiSession } from "../../../../lib/auth";
 import { checkCsrf } from "../../../../lib/csrf";
 import db from "../../../../lib/db";
 import fs from "fs";
@@ -19,6 +18,14 @@ const MAX_DECODED_BYTES = 8 * 1024 * 1024; // 8 MB after base64 decode
 
 const customCoversDir = () => path.join(process.env.CONFIG_DIRECTORY || "/config", "covers");
 
+function matchesMime(b: Buffer, mime: string): boolean {
+  if (mime === "image/jpeg") return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (mime === "image/png") return b.subarray(0, 4).toString("latin1") === "\x89PNG";
+  if (mime === "image/gif") return b.subarray(0, 4).toString("latin1") === "GIF8";
+  if (mime === "image/webp") return b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP";
+  return false;
+}
+
 function deleteCustomCoverFiles(id: number) {
   const dir = customCoversDir();
   for (const ext of Object.values(ALLOWED_MIME)) {
@@ -28,7 +35,7 @@ function deleteCustomCoverFiles(id: number) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
 
   if (req.method === "POST" || req.method === "DELETE") {
@@ -54,6 +61,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const buf = Buffer.from(base64, "base64");
+    if (!matchesMime(buf, mime)) {
+      res.status(400).json({ message: "That file isn't the image type it claims to be" });
+      return;
+    }
     if (buf.length > MAX_DECODED_BYTES) {
       res.status(400).json({ message: "Image must be under 8 MB" });
       return;

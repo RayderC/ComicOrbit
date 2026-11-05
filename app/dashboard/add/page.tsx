@@ -71,7 +71,7 @@ export default function AddSeriesPage() {
       <div className="dash-header">
         <div>
           <h1 className="dash-title">Add Series</h1>
-          <p className="dash-subtitle">Search MangaDex and MangaFreak, then queue downloads.</p>
+          <p className="dash-subtitle">Search MangaFreak, then queue downloads.</p>
         </div>
       </div>
 

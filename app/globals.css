@@ -2386,6 +2386,7 @@ body > * { position: relative; z-index: 2; }
   position: fixed;
   inset: 0;
   background: #050508;
+  padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2821,7 +2822,8 @@ body > * { position: relative; z-index: 2; }
 
 .reader-topbar {
   overflow: hidden;
-  max-height: 80px;
+  max-height: calc(80px + env(safe-area-inset-top));
+  padding-top: calc(12px + env(safe-area-inset-top));
   transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
 }
 
@@ -3281,17 +3283,10 @@ body > * { position: relative; z-index: 2; }
   border-top: 1px solid var(--border);
 }
 
-@media (max-width: 768px) {
-  .nav-hamburger { display: flex; }
+@media (max-width: 900px) {
   .nav-links { display: none !important; }
   .nav-actions { display: none !important; }
   .nav-inner { padding: 0 16px; }
-  /* On mobile: hamburger left, logo right via margin-left: auto */
-  .nav-logo { margin-left: auto; }
-}
-@media (min-width: 769px) {
-  /* Ensure hamburger is invisible and doesn't take layout space */
-  .nav-hamburger { display: none !important; }
 }
 
 /* ===================== LIBRARY PAGE CONTROLS ===================== */
@@ -3466,3 +3461,36 @@ body > * { position: relative; z-index: 2; }
 @media (max-width: 400px) {
   .series-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
+
+/* ===================== PHONE LAYOUT: BOTTOM TAB BAR ===================== */
+
+.tabbar { display: none; }
+
+@media (max-width: 900px) {
+  /* Keeps the end of every page clear of the bar. */
+  body:has(.tabbar) { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .tabbar {
+    display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+    background: rgba(17, 17, 24, 0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border-bright);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; min-width: 0;
+    background: none; border: none; cursor: pointer; text-decoration: none;
+    color: var(--text-muted); font-size: 10px; font-weight: 600; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tabbar-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabbar-item.active { color: var(--primary-light); text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+
+  /* The dashboard's menu opens from the bar's More tab, so it no longer needs a bar of its own at the top. */
+  .dash-mobile-bar { display: none !important; }
+  .dashboard-main { padding-top: calc(24px + env(safe-area-inset-top)); }
+  .sidebar { height: 100dvh; padding-top: calc(24px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
+
+/* Phones draw the app under the status bar when it's installed to the home screen. */
+.nav { padding-top: env(safe-area-inset-top); }
+
+@media print { .tabbar { display: none !important; } }

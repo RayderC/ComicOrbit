@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -11,12 +13,12 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Next.js requires unsafe-inline for its hydration scripts and styles.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       // Cover images are proxied through /api/cover — img-src only needs 'self' and data:.
       "img-src 'self' data: blob:",
       // SSE progress stream + API calls are same-origin; ws/wss for Next.js HMR in dev.
-      "connect-src 'self' wss: ws:",
+      `connect-src 'self'${isDev ? " wss: ws:" : ""}`,
       "font-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -27,6 +29,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
   serverExternalPackages: ["better-sqlite3", "yauzl", "archiver"],
   // Fix Turbopack workspace root detection when next is not at the filesystem root.
   turbopack: {

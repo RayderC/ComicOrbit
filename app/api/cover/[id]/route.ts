@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getVerifiedSession } from "@/lib/authServer";
 import fs from "fs";
 import path from "path";
 import db, { getSiteConfig } from "@/lib/db";
-import { isSafeExternalUrl } from "@/lib/safeUrl";
+import { safeFetch } from "@/lib/safeUrl";
 
 export const runtime = "nodejs";
 
@@ -25,7 +23,7 @@ function isPathWithinAllowedDirs(filePath: string): boolean {
 }
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const session = await getIronSession<{ user?: User }>(await cookies(), sessionOptions);
+  const session = await getVerifiedSession();
   if (!session.user) {
     return NextResponse.json({ message: "Login required" }, { status: 401 });
   }
@@ -40,32 +38,20 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const cover = row.cover_path;
 
   if (/^https?:\/\//i.test(cover)) {
-    // Block SSRF: reject private/loopback addresses
-    if (!isSafeExternalUrl(cover)) {
-      return NextResponse.json({ message: "invalid cover url" }, { status: 400 });
-    }
     try {
-      const upstream = await fetch(cover, {
-        signal: AbortSignal.timeout(15_000),
+      const { buffer, contentType } = await safeFetch(cover, {
+        maxBytes: 10 * 1024 * 1024,
+        timeoutMs: 15_000,
         headers: {
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
           "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
         },
       });
-      if (!upstream.ok) return NextResponse.json({ message: "upstream cover failed" }, { status: 502 });
-
-      // Validate the response is actually an image
-      const contentType = upstream.headers.get("content-type")?.split(";")[0].trim() || "";
       if (!SAFE_IMAGE_TYPES.has(contentType)) {
         return NextResponse.json({ message: "upstream returned non-image content" }, { status: 502 });
       }
-
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      return new NextResponse(new Uint8Array(buf), {
-        headers: {
-          "Content-Type": contentType,
-          "Cache-Control": "no-cache, must-revalidate",
-        },
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: { "Content-Type": contentType, "Cache-Control": "no-cache, must-revalidate" },
       });
     } catch {
       return NextResponse.json({ message: "proxy failed" }, { status: 502 });

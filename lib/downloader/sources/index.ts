@@ -1,17 +1,15 @@
-import { mangadexSource } from "./mangadex";
 import { mangafreakSource } from "./mangafreak";
 import type { Source, SearchResult } from "./types";
 
 export const SOURCES: Record<string, Source> = {
-  mangadex: mangadexSource,
   mangafreak: mangafreakSource,
 };
 
-export const MANGA_SOURCES = ["mangafreak", "mangadex"] as const;
+export const MANGA_SOURCES = ["mangafreak"] as const;
 
 export function getSource(id: string): Source {
   const s = SOURCES[id];
-  if (!s) throw new Error(`Unknown source: ${id}`);
+  if (!s) throw new Error(`The "${id}" download source is no longer available. Chapters you already have can still be read.`);
   return s;
 }
 

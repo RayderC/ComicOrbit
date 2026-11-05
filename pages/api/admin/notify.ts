@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { checkCsrf } from "../../../lib/csrf";
 import db from "../../../lib/db";
 import { sendPushToUser } from "../../../lib/webpush";
@@ -8,7 +7,7 @@ import { sendPushToUser } from "../../../lib/webpush";
 export const config = { api: { bodyParser: { sizeLimit: "8kb" } } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
 
   // GET: return all users with their push subscription status

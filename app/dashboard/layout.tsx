@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import TabBar from "../components/TabBar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -47,13 +48,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dashboard-root">
-      <div className="dash-mobile-bar">
-        <button className="dash-hamburger" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-          <span /><span /><span />
-        </button>
-        <span className="dash-mobile-title">Dashboard</span>
-      </div>
-
       {menuOpen && <div className="dash-backdrop" onClick={() => setMenuOpen(false)} />}
 
       <aside className={`sidebar${menuOpen ? " sidebar-open" : ""}`}>
@@ -89,6 +83,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <main className="dashboard-main">{children}</main>
+
+      <TabBar tabs={[
+        { label: "Overview", icon: "gauge", href: "/dashboard", active: pathname === "/dashboard" },
+        { label: "Add", icon: "plus", href: "/dashboard/add", active: pathname === "/dashboard/add" },
+        { label: "Downloads", icon: "download", href: "/dashboard/downloads", active: pathname === "/dashboard/downloads" },
+        { label: "Settings", icon: "settings", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
+        { label: "More", icon: "menu", active: menuOpen, onClick: () => setMenuOpen(true) },
+      ]} />
     </div>
   );
 }

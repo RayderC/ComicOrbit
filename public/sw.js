@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comicorbit-v2';
+const CACHE_NAME = 'comicorbit-v3';
 // Only cache files that are always publicly accessible (no auth redirect).
 // Authenticated pages like / and /library would 302 → /login during install,
 // causing cache.addAll() to throw and break the whole service worker install.
@@ -72,11 +72,13 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/';
+  // Only ever open a page on this site, whatever the payload says.
+  const parsed = new URL(event.notification.data?.url || '/', self.location.origin);
+  const url = parsed.origin === self.location.origin ? parsed.href : self.location.origin;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
+        if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
           client.navigate(url);
           return client.focus();
         }
@@ -95,8 +97,8 @@ self.addEventListener('fetch', (event) => {
   // Navigation: network first, fallback to cache
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match('/') || fetch(event.request)
+      fetch(event.request).catch(async () =>
+        (await caches.match('/')) ?? Response.error()
       )
     );
     return;

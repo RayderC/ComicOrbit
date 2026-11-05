@@ -1,18 +1,18 @@
 import type { NextApiRequest } from "next";
 
 /**
- * CSRF check: if the request includes an Origin header (always sent on cross-origin
- * fetch/XHR), it must match the server's Host. Same-origin browser requests and
- * direct API clients typically omit Origin, so they pass unconditionally.
+ * CSRF check for state-changing requests. Browsers set Sec-Fetch-Site and Origin themselves and
+ * pages can't fake them. Requests with neither (curl, scripts) carry no ambient browser session risk.
  */
 export function checkCsrf(req: NextApiRequest): boolean {
+  if (req.headers["sec-fetch-site"] === "same-origin") return true;
   const origin = req.headers.origin;
   if (!origin) return true;
-  const host = req.headers.host;
+  const forwarded = req.headers["x-forwarded-host"];
+  const host = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(",")[0].trim() || req.headers.host;
   if (!host) return false;
   try {
-    const parsed = new URL(origin);
-    return parsed.host === host;
+    return new URL(origin).host === host;
   } catch {
     return false;
   }

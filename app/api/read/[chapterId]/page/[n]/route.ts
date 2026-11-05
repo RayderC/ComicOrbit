@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getVerifiedSession } from "@/lib/authServer";
 import db from "@/lib/db";
 import { streamCbzImage } from "@/lib/cbz";
 
 export const runtime = "nodejs";
 
-type SessionData = { user?: User };
-
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ chapterId: string; n: string }> }
 ) {
-  const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+  const session = await getVerifiedSession();
   if (!session.user) {
     return NextResponse.json({ message: "Login required" }, { status: 401 });
   }

@@ -7,9 +7,8 @@ services:
       # host:container
       - 7080:7080
     environment:
+      # A random session secret is generated into ./config on first start.
       - SESSION_COOKIE_SECURE=false
-      # Generate a strong secret: openssl rand -hex 32
-      - SESSION_SECRET=${SESSION_SECRET:-change_me_to_a_random_64_char_string}
       - DATABASE_PATH=/config/comicorbit.db
       - MANGA_DIRECTORY=/Manga
       - CONFIG_DIRECTORY=/config

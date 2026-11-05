@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../lib/session";
+import { getApiSession } from "../../lib/auth";
 import { getSiteConfig, setSiteConfigKey } from "../../lib/db";
 import { checkCsrf } from "../../lib/csrf";
 
@@ -11,7 +10,6 @@ const EDITABLE_KEYS = new Set([
   "MANGA_DIRECTORY",
   "tagline",
   "description",
-  "default_manga_source",
   "VAPID_SUBJECT",
 ]);
 
@@ -33,12 +31,18 @@ function validateValue(key: string, value: string): string | null {
   return null;
 }
 
+/** The private push key has no reason to leave the server, even to an admin's browser. */
+function visibleConfig() {
+  const { VAPID_PRIVATE_KEY: _private, ...rest } = getSiteConfig();
+  return rest;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user?.isAdmin) return res.status(403).json({ message: "Forbidden" });
 
   if (req.method === "GET") {
-    return res.json(getSiteConfig());
+    return res.json(visibleConfig());
   }
 
   if (req.method === "PUT") {
@@ -53,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       setSiteConfigKey(key, str);
     }
 
-    return res.json(getSiteConfig());
+    return res.json(visibleConfig());
   }
 
   return res.status(405).end();

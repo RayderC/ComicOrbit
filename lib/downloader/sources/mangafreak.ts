@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import pLimit from "p-limit";
-import { isSafeExternalUrl } from "../../safeUrl";
+import { isSafeExternalUrl, isSafeExternalUrlResolved } from "../../safeUrl";
 import type {
   ChapterPayload,
   ChapterRef,
@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 const BASE = "https://ww1.mangafreak.me";
+const MAX_PAGE_BYTES = 50 * 1024 * 1024;
 const UA = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
   Accept: "text/html,application/xhtml+xml",
@@ -99,6 +100,7 @@ export const mangafreakSource: Source = {
   },
 
   async getMetadata(url: string): Promise<SeriesMetadata> {
+    if (!(await isSafeExternalUrlResolved(url))) throw new Error("Series URL points to a disallowed address");
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(30_000) });
     if (!res.ok) throw new Error(`MangaFreak metadata failed: ${res.status}`);
     const html = await res.text();
@@ -132,6 +134,7 @@ export const mangafreakSource: Source = {
   },
 
   async listChapters(url: string): Promise<ChapterRef[]> {
+    if (!(await isSafeExternalUrlResolved(url))) throw new Error("Series URL points to a disallowed address");
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(30_000) });
     if (!res.ok) throw new Error(`MangaFreak list failed: ${res.status}`);
     const html = await res.text();
@@ -140,7 +143,7 @@ export const mangafreakSource: Source = {
     const out: ChapterRef[] = [];
     $(".manga_series_list a, .chapter_list a").each((_, a) => {
       const href = absUrl($(a).attr("href") || "");
-      if (!href) return;
+      if (!href || !isSafeExternalUrl(href)) return; // scraped HTML could point anywhere
       const text = $(a).text().trim();
       const m = text.match(/(\d+(?:\.\d+)?)/);
       const num = m ? parseFloat(m[1]) : NaN;
@@ -167,8 +170,10 @@ export const mangafreakSource: Source = {
 
     // Strategy 1: scrape the chapter page
     try {
-      const pageRes = await fetch(ref.externalId, { headers: UA, signal });
-      if (pageRes.ok) {
+      const pageRes = (await isSafeExternalUrlResolved(ref.externalId))
+        ? await fetch(ref.externalId, { headers: UA, signal })
+        : null;
+      if (pageRes?.ok) {
         const html = await pageRes.text();
         const $ = cheerio.load(html);
 
@@ -279,7 +284,9 @@ export const mangafreakSource: Source = {
     let done = 0;
     await Promise.all(urls.map((u, i) => limit(async () => {
       const r = await fetchWithRetry(u, signal);
-      buffers[i] = Buffer.from(await r.arrayBuffer());
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length > MAX_PAGE_BYTES) throw new Error(`Page ${i + 1} is too large`);
+      buffers[i] = buf;
       done++;
       onProgress(done, urls.length);
     })));

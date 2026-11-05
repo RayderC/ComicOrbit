@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getPageSession } from "@/lib/authServer";
 import Navigation from "../../components/Navigation";
 import { StatusBadge } from "../../components/StatusBadge";
 import ChapterList, { type Chapter } from "../../components/ChapterList";
@@ -35,7 +33,7 @@ export default async function SeriesDetail({
   const seriesId = Number(id);
   if (!Number.isFinite(seriesId)) notFound();
 
-  const session = await getIronSession<{ user?: User }>(await cookies(), sessionOptions);
+  const session = await getPageSession();
   const isAdmin = session.user?.isAdmin === true;
 
   const series = db.prepare(`

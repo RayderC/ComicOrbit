@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import db from "../../../lib/db";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../lib/session";
+import { getApiSession } from "../../../lib/auth";
 import { slugify, sanitizeFsName } from "../../../lib/url";
 import { getSource } from "../../../lib/downloader/sources";
 import { isSafeExternalUrl } from "../../../lib/safeUrl";
@@ -31,7 +30,7 @@ export interface SeriesRow {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") {
-    const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+    const session = await getApiSession(req, res);
     if (!session.user) { res.status(401).json({ message: "Login required" }); return; }
 
     const { status, q, tag } = req.query;
@@ -71,15 +70,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "POST") {
     if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
-    const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+    const session = await getApiSession(req, res);
     if (!session.user?.isAdmin) {
       res.status(403).json({ message: "Forbidden" });
       return;
     }
 
     const { title, source, source_url, description, cover } = req.body ?? {};
-    if (!title || !source || !source_url) {
+    if (typeof title !== "string" || !title.trim() || typeof source !== "string" || !source || !source_url) {
       res.status(400).json({ message: "Missing field(s)" });
+      return;
+    }
+    if (title.length > 255) {
+      res.status(400).json({ message: "Title must be under 255 characters" });
+      return;
+    }
+    // Checked before anything is saved, so a rejected cover can't leave a half-created series behind.
+    if (cover && (typeof cover !== "string" || !isSafeExternalUrl(cover))) {
+      res.status(400).json({ message: "cover URL points to a disallowed address" });
       return;
     }
     if (typeof source_url !== "string") {
@@ -110,17 +118,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const info = db.prepare(`
       INSERT INTO series (slug, title, type, source, source_url, description, cover_path, status, series_folder)
       VALUES (?, ?, 'manga', ?, ?, ?, '', 'unknown', ?)
-    `).run(slug, title, source, source_url, description || "", folder);
+    `).run(slug, title, source, source_url, typeof description === "string" ? description.slice(0, 10_000) : "", folder);
 
     const seriesId = info.lastInsertRowid as number;
 
     db.prepare("INSERT INTO download_queue (series_id, status) VALUES (?, 'queued')").run(seriesId);
 
-    if (cover && typeof cover === "string") {
-      if (!isSafeExternalUrl(cover)) {
-        res.status(400).json({ message: "cover URL points to a disallowed address" });
-        return;
-      }
+    if (cover) {
       db.prepare("UPDATE series SET cover_path = ? WHERE id = ?").run(cover, seriesId);
     }
 

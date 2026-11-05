@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
-import { sessionOptions, User } from "@/lib/session";
+import { getPageSession } from "@/lib/authServer";
 import db from "@/lib/db";
 import Link from "next/link";
 import Navigation from "./components/Navigation";
@@ -143,7 +141,7 @@ function Shelf({
 }
 
 export default async function Home() {
-  const session = await getIronSession<{ user?: User }>(await cookies(), sessionOptions);
+  const session = await getPageSession();
   if (!session.user) redirect("/login");
 
   const userId = session.user.id;

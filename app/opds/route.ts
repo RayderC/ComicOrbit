@@ -5,7 +5,7 @@ import { feedToXml, nowIso, OPDS_NAVIGATION_TYPE, OPDS_ACQUISITION_TYPE } from "
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const user = authenticateBasic(req.headers.get("authorization"));
+  const user = await authenticateBasic(req);
   if (!user) {
     return new NextResponse("Authentication required", {
       status: 401,

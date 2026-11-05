@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getIronSession } from "iron-session";
-import { sessionOptions, User } from "../../../../lib/session";
+import { getApiSession } from "../../../../lib/auth";
 import { checkCsrf } from "../../../../lib/csrf";
 import db from "../../../../lib/db";
 import { syncAnilistProgress } from "../../../../lib/anilist";
@@ -11,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") { res.status(405).end(); return; }
   if (!checkCsrf(req)) { res.status(403).json({ message: "Forbidden" }); return; }
 
-  const session = await getIronSession<{ user?: User }>(req, res, sessionOptions);
+  const session = await getApiSession(req, res);
   if (!session.user) { res.status(401).json({ message: "Unauthorized" }); return; }
 
   const seriesId = Number(req.query.id);

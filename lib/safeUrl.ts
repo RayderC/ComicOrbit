@@ -21,7 +21,8 @@ export function isSafeExternalUrl(raw: string): boolean {
 
   const host = url.hostname.toLowerCase();
   if (!host) return false;
-  if (host === "localhost" || host.endsWith(".localhost")) return false;
+  const bare = host.replace(/\.$/, ""); // "localhost." resolves the same as "localhost"
+  if (bare === "localhost" || bare.endsWith(".localhost")) return false;
   if (host === "::" || host === "[::]") return false;
   if (host === "::1" || host === "[::1]") return false;
 
@@ -59,7 +60,7 @@ export async function isSafeExternalUrlResolved(raw: string): Promise<boolean> {
 
   let url: URL;
   try { url = new URL(raw); } catch { return false; }
-  const host = url.hostname.toLowerCase();
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
 
   // Literal IPs already validated by isSafeExternalUrl.
   if (net.isIP(host)) return true;
@@ -89,6 +90,8 @@ function isPrivateIPv4(addr: string): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;    // 172.16.0.0/12
   if (a === 192 && b === 168) return true;             // 192.168.0.0/16
   if (a === 100 && b >= 64 && b <= 127) return true;   // CGNAT 100.64.0.0/10
+  if (a === 192 && b === 0) return true;               // 192.0.0.0/24, 192.0.2.0/24
+  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking 198.18.0.0/15
   if (a >= 224) return true;                           // multicast + reserved
   return false;
 }
@@ -100,12 +103,73 @@ function isPrivateIPv6(addr: string): boolean {
   // IPv4-mapped (::ffff:127.0.0.1) and IPv4-compatible (::127.0.0.1) IPv6.
   const mapped = lower.match(/^::(?:ffff:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return isPrivateIPv4(mapped[1]);
+  // URL parsing rewrites [::ffff:127.0.0.1] as [::ffff:7f00:1], so the hex form has to be checked too.
+  const hex = lower.match(/^::(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = parseInt(hex[1], 16), lo = parseInt(hex[2], 16);
+    return isPrivateIPv4(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
+  }
 
   // Unique local fc00::/7.
   if (/^f[cd]/.test(lower)) return true;
   // Link-local fe80::/10.
   if (/^fe[89ab]/.test(lower)) return true;
+  // Site-local fec0::/10 and multicast ff00::/8.
+  if (/^fe[c-f]/.test(lower) || /^ff/.test(lower)) return true;
   // Discard prefix 100::/64.
   if (/^100:/.test(lower)) return true;
   return false;
+}
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * Fetches an untrusted URL. Every redirect hop is re-checked, because a public URL can redirect to
+ * an internal address, and the body is read with a hard size cap, because Content-Length can lie.
+ */
+export async function safeFetch(
+  raw: string,
+  opts: { maxBytes: number; timeoutMs: number; headers?: Record<string, string> },
+): Promise<{ buffer: Buffer; contentType: string }> {
+  const signal = AbortSignal.timeout(opts.timeoutMs);
+  let url = raw;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    if (!(await isSafeExternalUrlResolved(url))) throw new Error("disallowed url");
+    const res = await fetch(url, { headers: opts.headers, signal, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) {
+      const next = res.headers.get("location");
+      await res.body?.cancel();
+      if (!next) throw new Error("redirect without a location");
+      url = new URL(next, url).toString();
+      continue;
+    }
+    if (!res.ok) {
+      await res.body?.cancel();
+      throw new Error(`upstream returned ${res.status}`);
+    }
+    if (Number(res.headers.get("content-length") ?? 0) > opts.maxBytes) {
+      await res.body?.cancel();
+      throw new Error("response too large");
+    }
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    if (res.body) {
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.length;
+        if (total > opts.maxBytes) {
+          await reader.cancel();
+          throw new Error("response too large");
+        }
+        chunks.push(value);
+      }
+    }
+    return {
+      buffer: Buffer.concat(chunks),
+      contentType: (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase(),
+    };
+  }
+  throw new Error("too many redirects");
 }
