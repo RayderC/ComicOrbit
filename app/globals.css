@@ -2390,17 +2390,6 @@ body > * { position: relative; z-index: 2; }
   z-index: 10;
 }
 
-/* iPhone home-screen apps can report a screen that's a status bar too short, which left the
-   page sitting high. There the reader uses the real screen height instead (set by ReaderViewer). */
-html.ios-home-app .reader-page {
-  bottom: auto;
-  height: var(--reader-h, 100vh);
-}
-/* iOS only paints a home-screen app's bottom edge when the page behind is at least a screen tall.
-   The reader floats over an almost empty page, so stretch that page to the full screen. */
-html.ios-home-app { min-height: calc(100% + env(safe-area-inset-top)); }
-html.ios-home-app body { min-height: var(--reader-h, 100vh); overscroll-behavior: none; }
-
 /* The bars float over the page, so showing or hiding them never moves or resizes it. */
 .reader-topbar {
   position: absolute;
@@ -2438,7 +2427,7 @@ html.ios-home-app body { min-height: var(--reader-h, 100vh); overscroll-behavior
   text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
 }
 
-/* Centred in the area between the status bar and the home bar, like before the app drew under them. */
+/* The page is centred in the area between the status bar and the home bar. */
 .reader-viewport {
   position: absolute;
   top: env(safe-area-inset-top);
