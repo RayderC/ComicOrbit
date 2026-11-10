@@ -2396,6 +2396,10 @@ html.ios-home-app .reader-page {
   bottom: auto;
   height: var(--reader-h, 100vh);
 }
+/* iOS only paints a home-screen app's bottom edge when the page behind is at least a screen tall.
+   The reader floats over an almost empty page, so stretch that page to the full screen. */
+html.ios-home-app { min-height: calc(100% + env(safe-area-inset-top)); }
+html.ios-home-app body { min-height: var(--reader-h, 100vh); overscroll-behavior: none; }
 
 /* The bars float over the page, so showing or hiding them never moves or resizes it. */
 .reader-topbar {
