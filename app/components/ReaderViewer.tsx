@@ -55,9 +55,28 @@ export default function ReaderViewer({
     } catch { /* ignore */ }
   }, [chapter.id]);
 
+  // Wait for the page to settle, so dragging the slider across 100 pages is one save, not 100.
+  const latest = useRef({ page, total });
+  latest.current = { page, total };
   useEffect(() => {
-    saveProgress(page, page >= total - 1);
+    const t = setTimeout(() => saveProgress(page, page >= total - 1), 400);
+    return () => clearTimeout(t);
   }, [page, total, saveProgress]);
+  useEffect(() => {
+    // Leaving mid-wait still saves where you were.
+    const flush = () => {
+      const { page: p, total: t } = latest.current;
+      if (lastSaved.current === p && p < t - 1) return;
+      lastSaved.current = p;
+      fetch("/api/read/progress", {
+        method: "POST", keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapter_id: chapter.id, page: p, completed: p >= t - 1 }),
+      }).catch(() => {});
+    };
+    window.addEventListener("pagehide", flush);
+    return () => { window.removeEventListener("pagehide", flush); flush(); };
+  }, [chapter.id]);
 
   const goPrev = useCallback(() => {
     if (page > 0) {
@@ -188,7 +207,7 @@ export default function ReaderViewer({
   const chapterConfirmOverlay = pendingNav ? (
     <div style={{
       position: "fixed",
-      bottom: "90px",
+      bottom: "calc(90px + env(safe-area-inset-bottom))",
       left: "50%",
       transform: "translateX(-50%)",
       background: "rgba(10, 10, 18, 0.95)",
@@ -254,7 +273,7 @@ export default function ReaderViewer({
             />
           ))}
           {nextChapterId && (
-            <div className="reader-webtoon-next">
+            <div className="reader-webtoon-next" onClick={(e) => e.stopPropagation()}>
               <Link href={`/library/${seriesId}/read/${nextChapterId}`} className="btn btn-primary">
                 Next Chapter →
               </Link>

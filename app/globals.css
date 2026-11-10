@@ -2386,21 +2386,22 @@ body > * { position: relative; z-index: 2; }
   position: fixed;
   inset: 0;
   background: #050508;
-  padding-bottom: env(safe-area-inset-bottom);
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   z-index: 10;
 }
 
+/* The bars float over the page, so showing or hiding them never moves or resizes it. */
 .reader-topbar {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 24px;
+  padding: calc(12px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 12px calc(24px + env(safe-area-inset-left));
   background: rgba(10, 10, 18, 0.85);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -2427,8 +2428,8 @@ body > * { position: relative; z-index: 2; }
 }
 
 .reader-viewport {
-  flex: 1;
-  position: relative;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
 
@@ -2470,12 +2471,17 @@ body > * { position: relative; z-index: 2; }
 .reader-nav-btn.next { right: 16px; }
 
 .reader-progress-track {
-  flex-shrink: 0;
-  height: 36px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  height: calc(48px + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 0 calc(16px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(16px + env(safe-area-inset-left));
+  touch-action: none;
   background: rgba(10, 10, 18, 0.92);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
@@ -2494,18 +2500,19 @@ body > * { position: relative; z-index: 2; }
   flex: 1;
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
+  height: 4px;
   border-radius: 2px;
   background: var(--surface-2);
   outline: none;
   cursor: pointer;
+  touch-action: none;
 }
 
 .reader-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--primary-light);
   cursor: pointer;
@@ -2520,8 +2527,8 @@ body > * { position: relative; z-index: 2; }
 }
 
 .reader-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--primary-light);
   cursor: pointer;
@@ -2821,17 +2828,12 @@ body > * { position: relative; z-index: 2; }
 /* ===================== COMICORBIT: READER TOPBAR TOGGLE ===================== */
 
 .reader-topbar {
-  overflow: hidden;
-  max-height: calc(80px + env(safe-area-inset-top));
-  padding-top: calc(12px + env(safe-area-inset-top));
-  transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+  transition: transform 0.22s ease, opacity 0.22s ease;
 }
 
 .reader-topbar-hidden {
-  max-height: 0 !important;
+  transform: translateY(-100%);
   opacity: 0;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
   pointer-events: none;
 }
 
@@ -2839,21 +2841,20 @@ body > * { position: relative; z-index: 2; }
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 .reader-nav-btn { display: none; }
 
 /* Hide bottom slider bar together with topbar */
 .reader-progress-track {
-  transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
-  overflow: hidden;
+  transition: transform 0.22s ease, opacity 0.22s ease;
 }
 .reader-progress-track-hidden {
-  max-height: 0 !important;
+  transform: translateY(100%);
   opacity: 0;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  border-top-color: transparent !important;
   pointer-events: none;
 }
 
@@ -2866,6 +2867,8 @@ body > * { position: relative; z-index: 2; }
   flex-direction: column;
   align-items: center;
   background: #050508;
+  /* Room so the first and last page aren't stuck under the bars. */
+  padding: calc(56px + env(safe-area-inset-top)) 0 calc(48px + env(safe-area-inset-bottom));
 }
 .reader-viewport-webtoon img {
   position: static !important;
@@ -3473,16 +3476,21 @@ body > * { position: relative; z-index: 2; }
     display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
     background: rgba(17, 17, 24, 0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-bright);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 0 4px;
+    transform: translateZ(0);
   }
   .tabbar-item {
-    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; min-width: 0;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
     background: none; border: none; cursor: pointer; text-decoration: none;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
     color: var(--text-muted); font-size: 10px; font-weight: 600; font-family: var(--font-mono);
     text-transform: uppercase; letter-spacing: 0.04em;
   }
   .tabbar-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabbar-item.active { color: var(--primary-light); text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+  .tabbar-item:active svg { transform: scale(0.9); }
+  .tabbar-item svg { transition: transform 0.1s ease; pointer-events: none; }
 
   /* The dashboard's menu opens from the bar's More tab, so it no longer needs a bar of its own at the top. */
   .dash-mobile-bar { display: none !important; }
