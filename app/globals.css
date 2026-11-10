@@ -2390,6 +2390,13 @@ body > * { position: relative; z-index: 2; }
   z-index: 10;
 }
 
+/* iPhone home-screen apps can report a screen that's a status bar too short, which left the
+   page sitting high. There the reader uses the real screen height instead (set by ReaderViewer). */
+html.ios-home-app .reader-page {
+  bottom: auto;
+  height: var(--reader-h, 100vh);
+}
+
 /* The bars float over the page, so showing or hiding them never moves or resizes it. */
 .reader-topbar {
   position: absolute;
@@ -2427,9 +2434,13 @@ body > * { position: relative; z-index: 2; }
   text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
 }
 
+/* Centred in the area between the status bar and the home bar, like before the app drew under them. */
 .reader-viewport {
   position: absolute;
-  inset: 0;
+  top: env(safe-area-inset-top);
+  bottom: env(safe-area-inset-bottom);
+  left: env(safe-area-inset-left);
+  right: env(safe-area-inset-right);
   overflow: hidden;
 }
 
@@ -2868,7 +2879,7 @@ body > * { position: relative; z-index: 2; }
   align-items: center;
   background: #050508;
   /* Room so the first and last page aren't stuck under the bars. */
-  padding: calc(56px + env(safe-area-inset-top)) 0 calc(48px + env(safe-area-inset-bottom));
+  padding: 58px 0 48px;
 }
 .reader-viewport-webtoon img {
   position: static !important;

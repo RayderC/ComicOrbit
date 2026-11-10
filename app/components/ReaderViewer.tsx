@@ -55,6 +55,29 @@ export default function ReaderViewer({
     } catch { /* ignore */ }
   }, [chapter.id]);
 
+  // On an iPhone home-screen app, size the reader to the real screen (see .ios-home-app in globals.css).
+  useEffect(() => {
+    const nav = navigator as Navigator & { standalone?: boolean };
+    if (!nav.standalone || !/iPhone|iPod/.test(navigator.userAgent)) return;
+    const root = document.documentElement;
+    const size = () => {
+      const long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+      const portrait = window.matchMedia("(orientation: portrait)").matches;
+      // Never shorter than what iOS reports, in case the screen numbers are ever off.
+      root.style.setProperty("--reader-h", `${Math.max(portrait ? long : short, window.innerHeight)}px`);
+    };
+    size();
+    root.classList.add("ios-home-app");
+    window.addEventListener("resize", size);
+    window.addEventListener("orientationchange", size);
+    return () => {
+      window.removeEventListener("resize", size);
+      window.removeEventListener("orientationchange", size);
+      root.classList.remove("ios-home-app");
+      root.style.removeProperty("--reader-h");
+    };
+  }, []);
+
   // Wait for the page to settle, so dragging the slider across 100 pages is one save, not 100.
   const latest = useRef({ page, total });
   latest.current = { page, total };
