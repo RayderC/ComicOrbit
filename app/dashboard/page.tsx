@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BackupsCard, UpdateNotice } from "../components/OpsCards";
 
 interface Counts {
   series: number;
@@ -59,6 +60,7 @@ export default function DashboardOverview() {
         <Link href="/dashboard/add" className="btn btn-primary">+ Add Series</Link>
       </div>
 
+      <UpdateNotice />
       {c ? (
         <>
           <div className="stats-row">
@@ -84,6 +86,7 @@ export default function DashboardOverview() {
       ) : (
         <p style={{ color: "var(--text-muted)" }}>Loading…</p>
       )}
+      <BackupsCard />
     </>
   );
 }

@@ -22,6 +22,17 @@ export async function register() {
   startWorker();
   startOutboxFlusher();
 
+  // The nightly backup and the daily update check, each hour.
+  const { nightlyBackup } = await import("./lib/backupCore");
+  const { backupConfig } = await import("./lib/backup");
+  const { checkForUpdate } = await import("./lib/updateCore");
+  const jobs = async () => {
+    await nightlyBackup(backupConfig).catch((e) => console.error("[backup] nightly copy failed", e));
+    await checkForUpdate("rayderc/comicorbit");
+  };
+  setTimeout(jobs, 60_000).unref();
+  setInterval(jobs, 60 * 60 * 1000).unref();
+
   // Scan for new chapters on startup, then repeat every 6 hours.
   const SIX_HOURS = 6 * 60 * 60 * 1000;
   setTimeout(() => {

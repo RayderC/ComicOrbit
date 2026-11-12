@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+type SpreadPref = "auto" | "on" | "off";
+
+/** The first page of the pair a page belongs to: the cover alone, then 1–2, 3–4 and so on (zero-based). */
+const spreadStart = (p: number) => (p <= 0 ? 0 : p % 2 === 1 ? p : p - 1);
+
 interface Props {
   seriesId: number;
   seriesTitle: string;
@@ -29,6 +34,27 @@ export default function ReaderViewer({
   const preloadRef = useRef<HTMLImageElement | null>(null);
   const pageEls = useRef<(HTMLImageElement | null)[]>([]);
   const webtoonViewportRef = useRef<HTMLDivElement>(null);
+
+  // Two pages side by side, like a printed book. Auto turns it on when the screen is wider than tall
+  // (a tablet or phone sideways). The cover stays on its own, then pages pair up as 2–3, 4–5 and so on.
+  const [spreadPref, setSpreadPref] = useState<SpreadPref>("auto");
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    try { const v = localStorage.getItem("comicorbit.spread"); if (v === "on" || v === "off") setSpreadPref(v); } catch { /* private mode */ }
+    const check = () => setWide(window.innerWidth > window.innerHeight && window.innerWidth >= 700);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  const cycleSpread = () => {
+    const next: SpreadPref = spreadPref === "auto" ? "on" : spreadPref === "on" ? "off" : "auto";
+    setSpreadPref(next);
+    try { localStorage.setItem("comicorbit.spread", next); } catch { /* private mode */ }
+  };
+  const spreadOn = readingMode !== "webtoon" && total > 2 && (spreadPref === "on" || (spreadPref === "auto" && wide));
+  const first = spreadOn ? spreadStart(page) : page;
+  const shown = spreadOn && first > 0 && first + 1 < total ? [first, first + 1] : [first];
+  const lastShown = shown[shown.length - 1];
 
   const setPending = useCallback((nav: "next" | "prev" | null) => {
     pendingNavRef.current = nav;
@@ -57,11 +83,11 @@ export default function ReaderViewer({
 
   // Wait for the page to settle, so dragging the slider across 100 pages is one save, not 100.
   const latest = useRef({ page, total });
-  latest.current = { page, total };
+  latest.current = { page: lastShown, total };
   useEffect(() => {
-    const t = setTimeout(() => saveProgress(page, page >= total - 1), 400);
+    const t = setTimeout(() => saveProgress(lastShown, lastShown >= total - 1), 400);
     return () => clearTimeout(t);
-  }, [page, total, saveProgress]);
+  }, [lastShown, total, saveProgress]);
   useEffect(() => {
     // Leaving mid-wait still saves where you were.
     const flush = () => {
@@ -79,9 +105,9 @@ export default function ReaderViewer({
   }, [chapter.id]);
 
   const goPrev = useCallback(() => {
-    if (page > 0) {
+    if (first > 0) {
       setPending(null);
-      setPage((p) => p - 1);
+      setPage(spreadOn ? spreadStart(first - 1) : first - 1);
     } else if (prevChapterId) {
       if (pendingNavRef.current === "prev") {
         setPending(null);
@@ -94,12 +120,12 @@ export default function ReaderViewer({
         setPending("prev");
       }
     }
-  }, [page, prevChapterId, prevChapterPageCount, router, seriesId, setPending]);
+  }, [first, spreadOn, prevChapterId, prevChapterPageCount, router, seriesId, setPending]);
 
   const goNext = useCallback(() => {
-    if (page < total - 1) {
+    if (lastShown < total - 1) {
       setPending(null);
-      setPage((p) => p + 1);
+      setPage(lastShown + 1);
     } else if (nextChapterId) {
       if (pendingNavRef.current === "next") {
         setPending(null);
@@ -116,7 +142,7 @@ export default function ReaderViewer({
         setPending("next");
       }
     }
-  }, [page, total, nextChapterId, router, seriesId, setPending]);
+  }, [lastShown, total, nextChapterId, router, seriesId, setPending]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -134,15 +160,25 @@ export default function ReaderViewer({
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev, router, seriesId, readingMode]);
 
-  // Preload next page (paged modes only)
+  // Preload the next page or two (paged modes only)
   useEffect(() => {
     if (readingMode === "webtoon") return;
-    if (page < total - 1) {
+    for (let i = 1; i <= shown.length; i++) {
+      if (lastShown + i > total - 1) break;
       const img = new Image();
-      img.src = `/api/read/${chapter.id}/page/${page + 1}`;
+      img.src = `/api/read/${chapter.id}/page/${lastShown + i}`;
       preloadRef.current = img;
     }
-  }, [page, total, chapter.id, readingMode]);
+  }, [lastShown, shown.length, total, chapter.id, readingMode]);
+
+  // Near the end, start loading the next chapter so turning to it is instant.
+  const nextLoaded = useRef<number | null>(null);
+  useEffect(() => {
+    if (!nextChapterId || nextLoaded.current === nextChapterId || lastShown < total - 3) return;
+    nextLoaded.current = nextChapterId;
+    router.prefetch(`/library/${seriesId}/read/${nextChapterId}`);
+    for (const i of [0, 1, 2]) { const img = new Image(); img.src = `/api/read/${nextChapterId}/page/${i}`; }
+  }, [lastShown, total, nextChapterId, router, seriesId]);
 
   // Webtoon IntersectionObserver — update page counter as images scroll into view
   useEffect(() => {
@@ -225,14 +261,14 @@ export default function ReaderViewer({
       whiteSpace: "nowrap",
     }}>
       {pendingNav === "next"
-        ? (!nextChapterId && page >= total - 1 ? "Tap again to go back to series" : "Tap again for Next Chapter →")
+        ? (!nextChapterId && lastShown >= total - 1 ? "Tap again to go back to series" : "Tap again for Next Chapter →")
         : "← Tap again for Previous Chapter"}
     </div>
   ) : null;
 
   const progressBar = (
     <div className={trackClass}>
-      <span className="reader-slider-label">{page + 1}</span>
+      <span className="reader-slider-label">{first + 1}</span>
       <input
         type="range"
         className="reader-slider"
@@ -249,7 +285,13 @@ export default function ReaderViewer({
     <div className={topbarClass}>
       <Link href={`/library/${seriesId}`} className="btn btn-ghost btn-sm">← Back</Link>
       <div className="reader-title">{seriesTitle} — Chapter {chapter.number}</div>
-      <div className="reader-page-counter">{page + 1} / {total}</div>
+      {readingMode !== "webtoon" && total > 2 && (
+        <button type="button" className="btn btn-ghost btn-sm reader-spread-btn" onClick={cycleSpread}
+          aria-label={`Two pages: ${spreadPref}`} title="Show two pages side by side">
+          {spreadPref === "auto" ? "2 pages: auto" : spreadPref === "on" ? "2 pages: on" : "2 pages: off"}
+        </button>
+      )}
+      <div className="reader-page-counter">{shown.length > 1 ? `${first + 1}–${lastShown + 1}` : first + 1} / {total}</div>
     </div>
   );
 
@@ -290,12 +332,15 @@ export default function ReaderViewer({
     <div className="reader-page">
       {topBar}
       {chapterConfirmOverlay}
-      <div className="reader-viewport" onClick={handleViewportClick}>
-        <img
-          src={`/api/read/${chapter.id}/page/${page}`}
-          alt={`Page ${page + 1}`}
-          style={{ pointerEvents: "none" }}
-        />
+      <div className={`reader-viewport${shown.length > 1 ? " reader-spread" : ""}${readingMode === "rtl" ? " reader-rtl" : ""}`} onClick={handleViewportClick}>
+        {shown.map((p) => (
+          <img
+            key={p}
+            src={`/api/read/${chapter.id}/page/${p}`}
+            alt={`Page ${p + 1}`}
+            style={{ pointerEvents: "none" }}
+          />
+        ))}
       </div>
       {progressBar}
     </div>

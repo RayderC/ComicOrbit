@@ -16,158 +16,194 @@ if (!isBuildPhase) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 }
 
-const db = new Database(dbPath);
-db.pragma("busy_timeout = 5000");
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+/** Opens the database and brings its tables up to date. */
+function open(): Database.Database {
+  const db = new Database(dbPath);
+  db.pragma("busy_timeout = 5000");
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL DEFAULT '',
-    legacy_password TEXT NOT NULL DEFAULT '',
-    email TEXT NOT NULL DEFAULT '',
-    is_admin INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL DEFAULT '',
+      legacy_password TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      is_admin INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
 
-  CREATE TABLE IF NOT EXISTS site_config (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL DEFAULT ''
-  );
+    CREATE TABLE IF NOT EXISTS site_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    );
 
-  CREATE TABLE IF NOT EXISTS series (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT UNIQUE NOT NULL,
-    title TEXT NOT NULL,
-    type TEXT NOT NULL,
-    source TEXT NOT NULL DEFAULT '',
-    source_url TEXT NOT NULL DEFAULT '',
-    description TEXT NOT NULL DEFAULT '',
-    cover_path TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'unknown',
-    one_shot INTEGER NOT NULL DEFAULT 0,
-    series_folder TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+    CREATE TABLE IF NOT EXISTS series (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT '',
+      source_url TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      cover_path TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'unknown',
+      one_shot INTEGER NOT NULL DEFAULT 0,
+      series_folder TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
 
-  CREATE TABLE IF NOT EXISTS series_tags (
-    series_id INTEGER NOT NULL,
-    tag TEXT NOT NULL,
-    PRIMARY KEY (series_id, tag),
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS series_tags (
+      series_id INTEGER NOT NULL,
+      tag TEXT NOT NULL,
+      PRIMARY KEY (series_id, tag),
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    );
 
-  CREATE TABLE IF NOT EXISTS chapters (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    series_id INTEGER NOT NULL,
-    number REAL NOT NULL,
-    title TEXT NOT NULL DEFAULT '',
-    file_path TEXT NOT NULL,
-    page_count INTEGER NOT NULL DEFAULT 0,
-    downloaded_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (series_id, number),
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS chapters (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      series_id INTEGER NOT NULL,
+      number REAL NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      file_path TEXT NOT NULL,
+      page_count INTEGER NOT NULL DEFAULT 0,
+      downloaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (series_id, number),
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    );
 
-  CREATE TABLE IF NOT EXISTS download_queue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    series_id INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'queued',
-    error_message TEXT NOT NULL DEFAULT '',
-    progress_pct REAL NOT NULL DEFAULT 0,
-    current_chapter TEXT NOT NULL DEFAULT '',
-    added_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS download_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      series_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      error_message TEXT NOT NULL DEFAULT '',
+      progress_pct REAL NOT NULL DEFAULT 0,
+      current_chapter TEXT NOT NULL DEFAULT '',
+      added_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    );
 
-  CREATE TABLE IF NOT EXISTS read_progress (
-    user_id INTEGER NOT NULL,
-    series_id INTEGER NOT NULL,
-    chapter_id INTEGER NOT NULL,
-    page INTEGER NOT NULL DEFAULT 0,
-    completed INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (user_id, series_id, chapter_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE,
-    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS read_progress (
+      user_id INTEGER NOT NULL,
+      series_id INTEGER NOT NULL,
+      chapter_id INTEGER NOT NULL,
+      page INTEGER NOT NULL DEFAULT 0,
+      completed INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, series_id, chapter_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE,
+      FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+    );
 
-  CREATE TABLE IF NOT EXISTS favorites (
-    user_id INTEGER NOT NULL,
-    series_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (user_id, series_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS favorites (
+      user_id INTEGER NOT NULL,
+      series_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, series_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    );
 
-  CREATE INDEX IF NOT EXISTS idx_chapters_series ON chapters(series_id, number);
-  CREATE INDEX IF NOT EXISTS idx_queue_status ON download_queue(status);
-  CREATE INDEX IF NOT EXISTS idx_read_user ON read_progress(user_id, series_id);
-`);
+    CREATE INDEX IF NOT EXISTS idx_chapters_series ON chapters(series_id, number);
+    CREATE INDEX IF NOT EXISTS idx_queue_status ON download_queue(status);
+    CREATE INDEX IF NOT EXISTS idx_read_user ON read_progress(user_id, series_id);
+  `);
 
-// Inline migrations — each wrapped in try/catch so re-runs are no-ops.
-// Inline migrations — idempotent ALTER TABLE statements for upgrading existing DBs.
-// New installs get the correct schema from CREATE TABLE above; these only run for
-// users upgrading from an older version.
-const migrations = [
-  `ALTER TABLE users ADD COLUMN legacy_password TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE series ADD COLUMN one_shot INTEGER NOT NULL DEFAULT 0`,
-  `ALTER TABLE series ADD COLUMN series_folder TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE series ADD COLUMN reading_mode TEXT NOT NULL DEFAULT 'ltr'`,
-  `ALTER TABLE series ADD COLUMN original_cover_path TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE download_queue ADD COLUMN current_chapter TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE download_queue ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))`,
-  `ALTER TABLE users ADD COLUMN anilist_token TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE series ADD COLUMN anilist_id INTEGER`,
-  `ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`,
-  `CREATE TABLE IF NOT EXISTS push_subscriptions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    endpoint TEXT NOT NULL,
-    p256dh TEXT NOT NULL,
-    auth TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(user_id, endpoint),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`,
-  // Batches per-chapter pushes into a single notification per (user, series).
-  // The outbox flusher sends rows once they've been idle for the batch window.
-  `CREATE TABLE IF NOT EXISTS notification_outbox (
-    user_id INTEGER NOT NULL,
-    series_id INTEGER NOT NULL,
-    chapter_count INTEGER NOT NULL DEFAULT 1,
-    latest_chapter REAL,
-    first_at TEXT NOT NULL DEFAULT (datetime('now')),
-    last_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (user_id, series_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-  )`,
-  // Rolling diagnostics: last N push attempts so admins can see if Apple/Google
-  // is rejecting endpoints (typical 410 Gone, 4xx VAPID errors, etc).
-  `CREATE TABLE IF NOT EXISTS push_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    endpoint_host TEXT NOT NULL DEFAULT '',
-    status_code INTEGER,
-    error TEXT NOT NULL DEFAULT '',
-    title TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`,
-  `CREATE INDEX IF NOT EXISTS idx_push_log_created ON push_log(created_at DESC)`,
-];
+  // Inline migrations — each wrapped in try/catch so re-runs are no-ops.
+  // Inline migrations — idempotent ALTER TABLE statements for upgrading existing DBs.
+  // New installs get the correct schema from CREATE TABLE above; these only run for
+  // users upgrading from an older version.
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN legacy_password TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE series ADD COLUMN one_shot INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE series ADD COLUMN series_folder TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE series ADD COLUMN reading_mode TEXT NOT NULL DEFAULT 'ltr'`,
+    `ALTER TABLE series ADD COLUMN original_cover_path TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE download_queue ADD COLUMN current_chapter TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE download_queue ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))`,
+    `ALTER TABLE users ADD COLUMN anilist_token TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE series ADD COLUMN anilist_id INTEGER`,
+    `ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`,
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      endpoint TEXT NOT NULL,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, endpoint),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    // Batches per-chapter pushes into a single notification per (user, series).
+    // The outbox flusher sends rows once they've been idle for the batch window.
+    `CREATE TABLE IF NOT EXISTS notification_outbox (
+      user_id INTEGER NOT NULL,
+      series_id INTEGER NOT NULL,
+      chapter_count INTEGER NOT NULL DEFAULT 1,
+      latest_chapter REAL,
+      first_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, series_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    )`,
+    // Rolling diagnostics: last N push attempts so admins can see if Apple/Google
+    // is rejecting endpoints (typical 410 Gone, 4xx VAPID errors, etc).
+    `CREATE TABLE IF NOT EXISTS push_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      endpoint_host TEXT NOT NULL DEFAULT '',
+      status_code INTEGER,
+      error TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_push_log_created ON push_log(created_at DESC)`,
+    // Sign-in history, for the profile page and for spotting someone trying your password.
+    `CREATE TABLE IF NOT EXISTS sign_ins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      ip TEXT,
+      device TEXT,
+      ok INTEGER NOT NULL DEFAULT 1
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_sign_ins_user ON sign_ins(user_id, at)`,
+  ];
 
-if (!isBuildPhase) {
-  for (const sql of migrations) {
-    try { db.exec(sql); } catch { /* column/table already correct */ }
+  if (!isBuildPhase) {
+    for (const sql of migrations) {
+      try { db.exec(sql); } catch { /* column/table already correct */ }
+    }
   }
+  return db;
+}
+
+const g = globalThis as unknown as { __comicorbitDb?: Database.Database };
+
+/**
+ * Opened on first use and shared by every part of the server, so a restore can close it and swap the file.
+ * The next query opens it again.
+ */
+const db = new Proxy({} as Database.Database, {
+  get(_target, prop) {
+    const real = g.__comicorbitDb ?? (g.__comicorbitDb = open());
+    const value = Reflect.get(real, prop);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
+
+export const DB_PATH = dbPath;
+
+/** Closes the database so a restore can swap the file. */
+export function closeDb() {
+  g.__comicorbitDb?.close();
+  g.__comicorbitDb = undefined;
 }
 
 export function getSiteConfig(): Record<string, string> {

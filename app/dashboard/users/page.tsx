@@ -147,6 +147,13 @@ export default function UsersPage() {
     }
   }
 
+  async function handleSignOut(id: number, username: string) {
+    if (!confirm(`Sign ${username} out of every device?`)) return;
+    const res = await fetch("/api/admin/sign-out", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: id }) });
+    if (res.ok) { setSuccess(`${username} is signed out everywhere.`); setTimeout(() => setSuccess(""), 3000); }
+    else setError((await res.json()).message || "Failed to sign out");
+  }
+
   async function handleDelete(id: number, username: string) {
     if (!confirm(`Delete account "${username}"? This cannot be undone.`)) return;
     const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
@@ -400,6 +407,9 @@ export default function UsersPage() {
                       <div style={{ display: "flex", gap: "6px" }}>
                         <button className="btn btn-sm" onClick={() => startEdit(u)} style={{ background: "var(--surface-3, rgba(255,255,255,0.08))" }}>
                           Edit
+                        </button>
+                        <button className="btn btn-sm" onClick={() => handleSignOut(u.id, u.username)} style={{ background: "var(--surface-3, rgba(255,255,255,0.08))" }}>
+                          Sign out
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u.id, u.username)}>
                           Delete

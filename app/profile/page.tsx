@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "../components/Navigation";
+import { SignInsCard } from "../components/OpsCards";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -216,6 +217,8 @@ export default function ProfilePage() {
         </div>
 
         {/* AniList sync */}
+        <SignInsCard />
+
         <div className="card" style={{ padding: "28px", marginBottom: "24px" }}>
           <h2 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "6px" }}>AniList Sync</h2>
           <p style={{ fontSize: "12px", color: "var(--text-subtle)", marginBottom: "12px", lineHeight: 1.5 }}>

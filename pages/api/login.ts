@@ -6,6 +6,7 @@ import { checkCsrf } from "../../lib/csrf";
 import { clientIp } from "../../lib/clientIp";
 import { verifyWerkzeugHash } from "../../lib/legacyPassword";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { recordSignIn } from "../../lib/signIns";
 
 const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
 
@@ -60,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!authed) {
+    recordSignIn(row.id, req, false);
     res.status(400).json({ message: "Invalid credentials" });
     return;
   }
@@ -67,6 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = await getApiSession(req, res);
   session.user = { id: row.id, username: row.username, isAdmin: row.is_admin === 1, v: row.token_version };
   await session.save();
+  recordSignIn(row.id, req);
 
   res.json({ ok: true, user: session.user });
 }

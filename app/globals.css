@@ -3506,3 +3506,27 @@ body > * { position: relative; z-index: 2; }
 .nav { padding-top: env(safe-area-inset-top); }
 
 @media print { .tabbar { display: none !important; } }
+
+/* Backups, update notice and sign-ins */
+.ops-card { padding: 22px; margin-top: 24px; max-width: 640px; }
+.ops-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.ops-hint { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0 0 10px; }
+.ops-muted { color: var(--text-muted); font-size: 12px; }
+.ops-bad { color: var(--danger); font-size: 12px; font-weight: 600; }
+.ops-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.ops-list summary { cursor: pointer; font-size: 13px; color: var(--text-muted); padding: 6px 0; }
+.ops-row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.ops-row .ops-actions { margin: 0; }
+.update-quiet { font-size: 12px; color: var(--text-subtle); margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.update-card { border-color: var(--accent-cyan); }
+.update-cmd { font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+
+/* Two pages side by side. Right-to-left manga puts the first page on the right. */
+.reader-spread { display: flex; justify-content: center; align-items: center; }
+.reader-spread img { position: static; inset: auto; width: 50%; height: 100%; object-fit: contain; }
+.reader-spread img:first-child { object-position: right center; }
+.reader-spread img:last-child { object-position: left center; }
+.reader-spread.reader-rtl { flex-direction: row-reverse; }
+.reader-spread.reader-rtl img:first-child { object-position: left center; }
+.reader-spread.reader-rtl img:last-child { object-position: right center; }
+.reader-spread-btn { font-size: 11px; white-space: nowrap; }

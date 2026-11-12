@@ -12,11 +12,13 @@
 - **Netflix-style home page** — Continue Reading, **Next Up**, Recently Added, Recommended, and Favorites rows
 - **Login-gated** — every page requires authentication; first launch auto-redirects to account setup
 - **Download from MangaFreak** — parallel page downloads with live progress
-- **Built-in reader** — CBZ pages streamed from disk; tap left/right to turn pages, tap the middle to toggle the toolbar; keyboard arrows also work
+- **Built-in reader** — CBZ pages streamed from disk; tap left/right to turn pages, tap the middle to toggle the toolbar; keyboard arrows also work. On a tablet or a phone held sideways it shows two pages side by side (cover on its own), with a toggle in the toolbar, and the next chapter starts loading before you reach the end
 - **Per-user read progress** — picks up exactly where you left off
 - **Favorites & custom collections** — star series and group them however you want
 - **Tag / type / status filters** in the full library view
-- **Multi-user** — admin creates additional accounts from the dashboard
+- **Multi-user** — admin creates additional accounts from the dashboard, and can sign anyone out of every device. Your profile lists recent sign-ins and wrong-password tries, with **Sign out everywhere else**
+- **Backups** — a copy of the database every night (the last 7, in `/config/backups`), plus **Download backup** and restore on the dashboard. A copy is saved before every restore, so it can be undone. Manga files aren't included; back up `/Manga` your own way
+- **Update notice** — the dashboard says when a newer image is on Docker Hub (checked once a day; nothing about you is sent)
 - **PWA / Add to Home Screen** — installs as a full-screen app on iOS and Android with a proper icon and offline shell
 - **Single-container Docker** — SQLite database, auto-generated session secret, bind-mount volumes for your files
 
