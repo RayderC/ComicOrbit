@@ -40,8 +40,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/dashboard", destination: "/admin", permanent: false },
       { source: "/dashboard/add", destination: "/add", permanent: false },
+      { source: "/dashboard/library", destination: "/series", permanent: false },
       { source: "/dashboard/downloads", destination: "/downloads", permanent: false },
-      { source: "/dashboard/:rest(library|users|settings|notifications)", destination: "/admin", permanent: false },
+      { source: "/dashboard/:rest(users|settings|notifications)", destination: "/admin", permanent: false },
       { source: "/profile", destination: "/settings", permanent: false },
     ];
   },

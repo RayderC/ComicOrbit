@@ -19,7 +19,7 @@
 - **Multi-user** — admin creates additional accounts on the **Admin** page, and can sign anyone out of every device. Your **Settings** page lists recent sign-ins and wrong-password tries, with **Sign out everywhere else**
 - **Backups** — a copy of the database every night (the last 7, in `/config/backups`), plus **Download backup** and restore on the **Admin** page. A copy is saved before every restore, so it can be undone. Manga files aren't included; back up `/Manga` your own way
 - **Update notice** — the **Admin** page says when a newer image is on Docker Hub (checked once a day; nothing about you is sent)
-- **Same layout as the other apps** — a sidebar on big screens, and on phones a bottom bar with Home, Library, **Continue** (back to the chapter and page you left off on), Favorites and More. Admins also get **Add series**, **Downloads** and **Admin** in the menu. Old `/dashboard` links still work
+- **Same layout as the other apps** — a sidebar on big screens, and on phones a bottom bar with Home, Library, Favorites, Stats and More. Admins also get **Series** (reading direction, covers, checking for new chapters, removing), **Add series**, **Downloads** and **Admin** in the menu. Old `/dashboard` links still work
 - **PWA / Add to Home Screen** — installs as a full-screen app on iOS and Android with a proper icon and offline shell
 - **Single-container Docker** — SQLite database, auto-generated session secret, bind-mount volumes for your files
 

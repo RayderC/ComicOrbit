@@ -7,7 +7,6 @@ import Icon from "@/app/components/Icon";
 import { useMe } from "@/app/components/MeContext";
 import { BackupsCard, SsoSetup, UpdateNotice } from "@/app/components/OpsCards";
 import PushSection from "./PushSection";
-import SeriesSection from "./SeriesSection";
 import UsersSection, { type AdminUser } from "./UsersSection";
 
 /** One admin page, laid out like NitroLog's and AstroFit's: accounts, then everything else in sections. */
@@ -39,12 +38,6 @@ function Admin() {
       </div>
       <UpdateNotice />
       <UsersSection users={users} reload={reload} creating={creating} setCreating={setCreating} />
-
-      <div className="admin-section">
-        <div className="section-header"><h2 className="section-title">All series</h2></div>
-        <p className="settings-hint" style={{ marginBottom: 10 }}>Every series in the library. Set which way it reads, change its cover, check it for new chapters, or remove it.</p>
-        <SeriesSection />
-      </div>
 
       <PushSection prefill={prefill} />
       <SsoSetup appName="ComicOrbit" />
