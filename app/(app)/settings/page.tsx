@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Navigation from "../components/Navigation";
-import { SignInsCard } from "../components/OpsCards";
+import { SignInsCard } from "@/app/components/OpsCards";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -180,16 +179,17 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: "100vh" }}><Navigation /><div className="projects-page-inner"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div></div>
+    <div className="loading">Loading…</div>
   );
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Navigation />
-      <div className="projects-page-inner" style={{ maxWidth: "520px" }}>
-        <div className="projects-page-header">
-          <p className="section-eyebrow">Account</p>
-          <h1 className="projects-page-title">Profile</h1>
+    <div>
+      <div className="page page-narrow">
+        <div className="dash-header">
+          <div>
+            <h1 className="dash-title">Settings</h1>
+            <p className="dash-subtitle">Your account, AniList, the OPDS feed and notifications.</p>
+          </div>
         </div>
 
         {/* Account details */}

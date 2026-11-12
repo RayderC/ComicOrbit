@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPageSession } from "@/lib/authServer";
-import Navigation from "../../components/Navigation";
-import { StatusBadge } from "../../components/StatusBadge";
-import ChapterList, { type Chapter } from "../../components/ChapterList";
+import { StatusBadge } from "@/app/components/StatusBadge";
+import ChapterList, { type Chapter } from "@/app/components/ChapterList";
 import SeriesDetailActions from "./SeriesDetailActions";
-import DescriptionExpander from "../../components/DescriptionExpander";
+import DescriptionExpander from "@/app/components/DescriptionExpander";
 import db from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -51,8 +50,6 @@ export default async function SeriesDetail({
 
   return (
     <div>
-      <Navigation />
-
       <div className="project-detail-page">
         <Link href="/library" className="back-link">← Back to library</Link>
 

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPageSession } from "@/lib/authServer";
 import db from "@/lib/db";
-import Navigation from "../components/Navigation";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -61,12 +60,13 @@ export default async function StatsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Navigation />
-      <div className="projects-page-inner" style={{ maxWidth: "860px" }}>
-        <div className="projects-page-header">
-          <p className="section-eyebrow">Your library</p>
-          <h1 className="projects-page-title">Reading Stats</h1>
+    <div>
+      <div className="page">
+        <div className="dash-header">
+          <div>
+            <h1 className="dash-title">Stats</h1>
+            <p className="dash-subtitle">What you&apos;ve read.</p>
+          </div>
         </div>
 
         {/* Overview cards */}

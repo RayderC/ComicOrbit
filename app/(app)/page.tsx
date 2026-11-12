@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { getPageSession } from "@/lib/authServer";
 import db from "@/lib/db";
 import Link from "next/link";
-import Navigation from "./components/Navigation";
 
 interface ContinueItem {
   series_id: number;
@@ -286,10 +285,14 @@ export default async function Home() {
     recentChapters.length === 0;
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Navigation />
-
-      <main className="home-content">
+    <div>
+      <div className="home-content">
+        <div className="dash-header">
+            <div>
+              <h1 className="dash-title">Home</h1>
+              <p className="dash-subtitle">Pick up where you left off.</p>
+            </div>
+          </div>
         {continueReading.length > 0 && (
           <Shelf title="Continue Reading" viewAllHref="/library">
             {continueReading.map((item) => (
@@ -384,22 +387,16 @@ export default async function Home() {
             <div className="empty-icon">◈</div>
             <p className="empty-title">Your library is empty</p>
             <p className="empty-desc">
-              Add some manga from the dashboard to get started.
+              Add a series to get started.
             </p>
             {session.user.isAdmin && (
-              <Link href="/dashboard/add" className="btn btn-primary" style={{ marginTop: "16px" }}>
+              <Link href="/add" className="btn btn-primary" style={{ marginTop: "16px" }}>
                 + Add Manga
               </Link>
             )}
           </div>
         )}
-      </main>
-
-      <footer className="site-footer">
-        <p style={{ fontSize: "13px", color: "var(--text-subtle)" }}>
-          ComicOrbit — self-hosted manga library.
-        </p>
-      </footer>
+      </div>
     </div>
   );
 }

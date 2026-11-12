@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Navigation from "../components/Navigation";
-import SeriesCard, { type Series } from "../components/SeriesCard";
+import SeriesCard, { type Series } from "@/app/components/SeriesCard";
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -38,13 +37,13 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Navigation />
-
-      <div className="projects-page-inner">
-        <div className="projects-page-header">
-          <p className="section-eyebrow">Yours</p>
-          <h1 className="projects-page-title">Favorites</h1>
+    <div>
+      <div className="page-wide">
+        <div className="dash-header">
+          <div>
+            <h1 className="dash-title">Favorites</h1>
+            <p className="dash-subtitle">Series you starred.</p>
+          </div>
         </div>
 
         {loading ? (

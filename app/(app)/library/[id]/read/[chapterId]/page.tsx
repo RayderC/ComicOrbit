@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import ReaderViewer from "../../../../components/ReaderViewer";
+import ReaderViewer from "@/app/components/ReaderViewer";
 import db from "@/lib/db";
 import { getPageSession } from "@/lib/authServer";
 

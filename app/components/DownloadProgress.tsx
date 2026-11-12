@@ -155,7 +155,7 @@ export default function DownloadProgress() {
               {status === "error" && (
                 <Link
                   className="btn btn-ghost btn-sm"
-                  href={`/dashboard/users?notifyTitle=${encodeURIComponent(`Download failed: ${q.title}`)}&notifyBody=${encodeURIComponent(err || "Download failed — see dashboard for details")}`}
+                  href={`/admin?notifyTitle=${encodeURIComponent(`Download failed: ${q.title}`)}&notifyBody=${encodeURIComponent(err || "Download failed — see Downloads for details")}`}
                   title="Pre-fill the admin notify form with this failure"
                 >
                   Notify users

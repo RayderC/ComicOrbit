@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AdminsOnly } from "@/app/components/AdminsOnly";
+import { useMe } from "@/app/components/MeContext";
 
 interface SearchHit {
   source: string;
@@ -16,6 +18,7 @@ interface SearchHit {
 }
 
 export default function AddSeriesPage() {
+  const me = useMe();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
@@ -58,7 +61,7 @@ export default function AddSeriesPage() {
         }),
       });
       if (!r.ok) throw new Error((await r.json()).message || "failed");
-      router.push("/dashboard/downloads");
+      router.push("/downloads");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -66,11 +69,13 @@ export default function AddSeriesPage() {
     }
   }
 
+  if (!me.isAdmin) return <AdminsOnly />;
+
   return (
-    <>
+    <div className="page">
       <div className="dash-header">
         <div>
-          <h1 className="dash-title">Add Series</h1>
+          <h1 className="dash-title">Add series</h1>
           <p className="dash-subtitle">Search MangaFreak, then queue downloads.</p>
         </div>
       </div>
@@ -135,6 +140,6 @@ export default function AddSeriesPage() {
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }

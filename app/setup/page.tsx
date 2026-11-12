@@ -43,7 +43,7 @@ export default function Setup() {
       headers: { "Content-Type": "application/json" },
     });
     setLoading(false);
-    if (res.ok) router.push("/dashboard");
+    if (res.ok) router.push("/admin");
     else setError((await res.json()).message || "Setup failed");
   }
 

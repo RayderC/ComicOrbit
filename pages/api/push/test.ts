@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await sendPushToUser(session.user.id, {
       title: "ComicOrbit",
       body: "Test notification — it's working!",
-      url: "/profile",
+      url: "/settings",
     });
     res.json({ ok: true });
   } catch (e) {

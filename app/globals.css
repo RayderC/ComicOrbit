@@ -3532,3 +3532,128 @@ body > * { position: relative; z-index: 2; }
 .reader-spread-btn { font-size: 11px; white-space: nowrap; }
 .ops-form { display: flex; flex-direction: column; gap: 8px; }
 .sso-btn { display: flex; justify-content: center; text-decoration: none; margin-top: 10px; }
+
+/* On/Off next to a card's title, like the optional-service cards in the other apps. */
+.ops-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ops-head .ops-title { margin: 0; }
+.ops-badge { font-size: 11px; font-weight: 700; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 999px;
+  background: rgba(255,255,255,0.04); color: var(--text-subtle); border: 1px solid var(--border-bright); }
+.ops-badge.on { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.35); }
+
+/* ===================== APP SHELL =====================
+   The same sidebar, tab bar and page layout as NitroLog and AstroFit. Scoped to .app-shell where an
+   older ComicOrbit rule of the same name was made for the old top bar. */
+
+.app-shell .sidebar { padding: 0; }
+.app-shell .sidebar-logo-wrap { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.app-shell .sidebar-logo {
+  font-size: 18px; font-weight: 800; letter-spacing: -0.5px; text-transform: none; text-decoration: none;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--primary-light) 45%, var(--primary) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.app-shell .sidebar-close { margin-left: auto; }
+.sidebar-nav { flex: 1; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+.app-shell .sidebar-section-label { padding: 12px 10px 4px; margin: 0; }
+.app-shell .sidebar-item { text-decoration: none; font-weight: 500; }
+.app-shell .sidebar-item.active { font-weight: 600; }
+.app-shell .sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.app-shell .sidebar-footer { margin-top: 0; padding: 8px 8px 12px; }
+.sidebar-start {
+  display: flex; align-items: center; gap: 10px; justify-content: center;
+  margin: 4px 2px 10px; padding: 10px; border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary) 0%, #5b1a8a 100%);
+  border: 1px solid rgba(168, 85, 247, 0.55); color: #fff; font-weight: 700; font-size: 13px;
+  text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; font-family: inherit; text-decoration: none;
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.25), 0 6px 20px rgba(124, 14, 179, 0.25);
+}
+.sidebar-start:hover { box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.45), 0 0 24px rgba(168, 85, 247, 0.5); }
+.sidebar-start svg { width: 16px; height: 16px; }
+.sidebar-user { font-family: var(--font-mono); font-size: 11px; color: var(--text-subtle); padding: 4px 10px 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.app-shell .dashboard-main { padding: 36px 40px; min-height: 100vh; min-width: 0; }
+.page { max-width: 880px; }
+.page-narrow { max-width: 680px; }
+.page-wide { max-width: 1200px; }
+
+/* Pages that used to sit under the top bar keep their own look but lose the padding the shell now gives. */
+.app-shell .home-content { padding: 0; }
+.app-shell .shelf { padding: 0; }
+.app-shell .project-detail-page { margin: 0; padding: 0; }
+
+.loading { display: flex; align-items: center; justify-content: center; padding: 48px 16px; color: var(--text-muted); font-size: 14px; gap: 10px; }
+.loading::before {
+  content: ""; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;
+  border: 2px solid var(--border); border-top-color: var(--primary-light); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Cards, lists and forms, as in the other apps */
+.flex { display: flex; }
+.gap-2 { gap: 8px; }
+.items-center { align-items: center; }
+.text-link { color: var(--accent-cyan); }
+.text-link:hover { text-decoration: underline; }
+.settings-hint { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.form-stack { display: flex; flex-direction: column; gap: 14px; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-muted); cursor: pointer; }
+.check-row input { width: 16px; height: 16px; accent-color: var(--primary-light); }
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-off { opacity: 0.5; }
+.badge-cyan { background: rgba(34,211,238,0.1); color: var(--accent-cyan); border: 1px solid rgba(34,211,238,0.2); }
+.row-list { display: flex; flex-direction: column; gap: 8px; }
+.row-card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; color: var(--text); }
+.row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.row-title { font-weight: 700; font-size: 15px; color: var(--text); text-decoration: none; min-width: 0; overflow-wrap: anywhere; }
+a.row-title:hover { color: var(--accent-cyan); }
+.row-sub { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); font-weight: 400; }
+.row-body { font-size: 13px; color: var(--text-muted); margin-top: 6px; overflow-wrap: anywhere; }
+.row-stats { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); overflow-wrap: anywhere; }
+.admin-section { margin: 28px 0; }
+.app-shell .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.app-shell .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: 0; }
+.admin-card { padding: 22px; margin-top: 24px; max-width: 640px; }
+.admin-select { width: auto; min-width: 150px; padding: 6px 10px; font-size: 13px; }
+.push-log summary { cursor: pointer; font-size: 13px; color: var(--text-muted); padding: 6px 0; }
+.push-code { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+.push-ok { color: var(--success); }
+.push-gone { color: var(--text-subtle); }
+.push-bad { color: var(--danger); }
+.app-shell .ops-card { max-width: 680px; }
+
+/* Pop-ups, a sheet from the bottom on phones */
+.modal-overlay { position: fixed; inset: 0; background: rgba(10,10,18,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 24px; backdrop-filter: blur(4px); }
+.modal {
+  background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--radius-lg); padding: 28px; width: 100%; max-width: 480px;
+  position: relative; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; font-family: monospace; }
+.modal-close:hover { color: var(--text); }
+.modal-body { overflow-y: auto; min-height: 0; flex: 1; padding: 2px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--border); }
+
+@media (max-width: 900px) {
+  .app-shell .dashboard-main { padding: calc(20px + env(safe-area-inset-top)) 16px 24px; }
+  .app-shell .sidebar { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .app-shell .tabbar { grid-template-columns: repeat(5, 1fr); }
+  .tabbar-main { color: var(--accent-cyan); }
+  .tabbar-main svg { filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.6)); }
+  .app-shell .dash-header { flex-direction: row; align-items: flex-start; }
+  .app-shell .dash-title { font-size: 24px; }
+}
+@media (max-width: 640px) {
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-width: 100%; max-height: 90vh; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .modal .form-input { font-size: 16px; }
+}
+
+/* Cards, the same as the other apps. ComicOrbit's settings and admin cards had no style of their own. */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  position: relative; padding: 20px;
+}
+.card::before {
+  content: ''; position: absolute; top: 8px; left: 8px; width: 14px; height: 14px; pointer-events: none;
+  border-top: 1px solid rgba(34, 211, 238, 0.5); border-left: 1px solid rgba(34, 211, 238, 0.5);
+}

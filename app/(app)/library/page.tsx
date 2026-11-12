@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Navigation from "../components/Navigation";
-import SeriesCard, { type Series } from "../components/SeriesCard";
+import SeriesCard, { type Series } from "@/app/components/SeriesCard";
 
 interface SeriesWithTags extends Series { tags?: string[]; }
 
@@ -82,16 +81,13 @@ export default function LibraryPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Navigation />
-
-      <div className="projects-page-inner">
-        <div className="projects-page-header">
-          <p className="section-eyebrow">Library</p>
-          <h1 className="projects-page-title">All Series</h1>
-          <p className="projects-page-desc">
-            {loading ? "Loading…" : `${series.length} series in your collection.`}
-          </p>
+    <div>
+      <div className="page-wide">
+        <div className="dash-header">
+          <div>
+            <h1 className="dash-title">Library</h1>
+            <p className="dash-subtitle">{loading ? "Loading…" : `${series.length} series`}</p>
+          </div>
         </div>
 
         <div className="library-controls">
