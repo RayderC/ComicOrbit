@@ -175,8 +175,8 @@ export function SsoSetup({ appName }: { appName: string }) {
       </p>
       {!s.fromEnv && (
         <div className="ops-form">
-          <input className="form-input" aria-label="Amethyst address" placeholder={s.url ?? "Amethyst's address, like http://192.168.1.5:3000"} value={url} onChange={e => setUrl(e.target.value)} />
-          <input className="form-input" aria-label="Shared secret" placeholder="Shared secret" type="password" autoComplete="off" value={secret} onChange={e => setSecret(e.target.value)} />
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" autoComplete="off" className="form-input" aria-label="Amethyst address" placeholder={s.url ?? "Amethyst's address, like rayder.xyz or http://192.168.1.5:3000"} value={url} onChange={e => setUrl(e.target.value)} />
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" className="form-input" aria-label="Shared secret" placeholder="Shared secret" type="password" autoComplete="off" value={secret} onChange={e => setSecret(e.target.value)} />
           <div className="ops-actions">
             <button type="button" className="btn btn-primary btn-sm" disabled={!secret || !(url || s.url)} onClick={() => save({ url: url || s.url, secret }, "Saved. The login page now has the button.")}>Save</button>
             {s.enabled && <button type="button" className="btn btn-secondary btn-sm" onClick={() => save({ off: true }, "Turned off.")}>Turn off</button>}

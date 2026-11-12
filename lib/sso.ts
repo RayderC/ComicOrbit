@@ -4,14 +4,15 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import db, { getSiteConfig, setSiteConfigKey } from "./db";
 import { getApiSession } from "./auth";
 import { recordSignIn } from "./signIns";
-import { isGoodSecret, originFrom, verifyPass } from "./ssoCore";
+import { amethystOrigin, isGoodSecret, originFrom, verifyPass } from "./ssoCore";
 
 export const SSO_APP = "comicorbit";
 const COOKIE = "comicorbit_sso_state";
 
 export function ssoConfig(): { url: string; secret: string; fromEnv: boolean } | null {
   const envUrl = process.env.AMETHYST_URL, envSecret = process.env.AMETHYST_SSO_SECRET;
-  if (envUrl && isGoodSecret(envSecret)) return { url: envUrl.replace(/\/+$/, ""), secret: envSecret.trim(), fromEnv: true };
+  const envOrigin = amethystOrigin(envUrl);
+  if (envOrigin && isGoodSecret(envSecret)) return { url: envOrigin, secret: envSecret.trim(), fromEnv: true };
   const c = getSiteConfig();
   return c.sso_url && isGoodSecret(c.sso_secret) ? { url: c.sso_url, secret: c.sso_secret.trim(), fromEnv: false } : null;
 }

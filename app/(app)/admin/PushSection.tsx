@@ -78,9 +78,9 @@ export default function PushSection({ prefill }: { prefill: { title: string; bod
           </div>
         </div>
         <div className="form-group"><label className="form-label" htmlFor="push-title">Title</label>
-          <input id="push-title" className="form-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="ComicOrbit" maxLength={100} /></div>
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" autoComplete="off" id="push-title" className="form-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="ComicOrbit" maxLength={100} /></div>
         <div className="form-group"><label className="form-label" htmlFor="push-body">Message</label>
-          <input id="push-body" className="form-input" value={body} onChange={e => setBody(e.target.value)} placeholder="A test from the admin page" maxLength={200} /></div>
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" autoComplete="off" id="push-body" className="form-input" value={body} onChange={e => setBody(e.target.value)} placeholder="A test from the admin page" maxLength={200} /></div>
         {result && <p className={result.ok ? "settings-hint" : "form-error"} role="status">{result.text}</p>}
         <div><button className="btn btn-primary btn-sm" disabled={sending || picked.size === 0}>{sending ? "Sending…" : `Send to ${picked.size} ${picked.size === 1 ? "person" : "people"}`}</button></div>
       </form>
@@ -88,7 +88,7 @@ export default function PushSection({ prefill }: { prefill: { title: string; bod
       <form onSubmit={saveSubject} className="form-stack" style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
         <div className="form-group">
           <label className="form-label" htmlFor="vapid-subject">Contact for the push services</label>
-          <input id="vapid-subject" className="form-input" value={subject} onChange={e => setSubject(e.target.value)} placeholder="mailto:you@example.com" />
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" autoComplete="off" id="vapid-subject" className="form-input" value={subject} onChange={e => setSubject(e.target.value)} placeholder="mailto:you@example.com" />
           <span className="form-hint">Apple turns down made-up addresses, so use a real <code>mailto:</code> or an <code>https://</code> address. Leave it empty for the built-in one.</span>
         </div>
         {subjectMsg && <p className={subjectMsg.ok ? "settings-hint" : "form-error"} role="status">{subjectMsg.text}</p>}

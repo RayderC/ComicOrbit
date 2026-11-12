@@ -90,8 +90,8 @@ function CreateUser({ onClose, onDone }: { onClose: () => void; onDone: () => vo
     <Modal title="New user" onClose={onClose} footer={<button className="btn btn-primary" onClick={save} disabled={!username.trim() || password.length < 8}>Create</button>}>
       <div className="form-stack">
         {err && <p className="form-error">{err}</p>}
-        <div className="form-group"><label className="form-label" htmlFor="nu-name">Username</label><input id="nu-name" className="form-input" autoCapitalize="none" autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} autoFocus /></div>
-        <div className="form-group"><label className="form-label" htmlFor="nu-pw">Password (8+ characters)</label><input id="nu-pw" type="password" className="form-input" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></div>
+        <div className="form-group"><label className="form-label" htmlFor="nu-name">Username</label><input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" id="nu-name" className="form-input" autoCapitalize="none" autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} autoFocus /></div>
+        <div className="form-group"><label className="form-label" htmlFor="nu-pw">Password (8+ characters)</label><input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" id="nu-pw" type="password" className="form-input" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></div>
         <label className="check-row"><input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} /> Admin</label>
       </div>
     </Modal>
@@ -122,12 +122,12 @@ function EditUser({ user, self, onClose, onDone }: { user: AdminUser; self: bool
       <div className="form-stack">
         {err && <p className="form-error">{err}</p>}
         <div className="form-group"><label className="form-label" htmlFor="eu-name">Username</label>
-          <input id="eu-name" className="form-input" autoCapitalize="none" autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} /></div>
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" id="eu-name" className="form-input" autoCapitalize="none" autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} /></div>
         <div className="form-group"><label className="form-label" htmlFor="eu-pw">New password</label>
-          <input id="eu-pw" type="password" className="form-input" autoComplete="new-password" placeholder="Leave empty to keep the current one" value={password} onChange={e => setPassword(e.target.value)} />
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" id="eu-pw" type="password" className="form-input" autoComplete="new-password" placeholder="Leave empty to keep the current one" value={password} onChange={e => setPassword(e.target.value)} />
           <span className="form-hint">8 or more characters.</span></div>
         <div className="form-group"><label className="form-label" htmlFor="eu-email">Email</label>
-          <input id="eu-email" type="email" className="form-input" placeholder="None" value={email} onChange={e => setEmail(e.target.value)} /></div>
+          <input data-bwignore="true" data-1p-ignore="true" data-lpignore="true" autoComplete="off" id="eu-email" type="email" className="form-input" placeholder="None" value={email} onChange={e => setEmail(e.target.value)} /></div>
         {!self && <label className="check-row"><input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} /> Admin</label>}
         {user.anilist === 1 && <label className="check-row"><input type="checkbox" checked={disconnect} onChange={e => setDisconnect(e.target.checked)} /> Disconnect AniList</label>}
       </div>
