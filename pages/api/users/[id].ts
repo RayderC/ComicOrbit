@@ -38,18 +38,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "PATCH") {
-    const { username, password, isAdmin } = req.body ?? {};
+    const { username, password, isAdmin, email, disconnectAnilist } = req.body ?? {};
 
     // Validate and prepare values before entering the transaction (bcrypt is slow).
     let cleanUsername: string | undefined;
     let hashedPassword: string | undefined;
+    let cleanEmail: string | undefined;
 
     if (username && typeof username === "string") {
       cleanUsername = username.trim().toLowerCase();
-      if (cleanUsername.length < 2 || cleanUsername.length > 50) {
-        res.status(400).json({ message: "Username must be 2–50 characters" });
+      if (cleanUsername.length < 2 || cleanUsername.length > 50 || /\s/.test(cleanUsername)) {
+        res.status(400).json({ message: "Username must be 2–50 characters, with no spaces" });
         return;
       }
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || (email.trim() !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) || email.length > 200) {
+        res.status(400).json({ message: "That email doesn't look right" });
+        return;
+      }
+      cleanEmail = email.trim();
     }
 
     if (password && typeof password === "string") {
@@ -60,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hashedPassword = bcrypt.hashSync(password, 10);
     }
 
-    if (cleanUsername === undefined && hashedPassword === undefined && typeof isAdmin !== "boolean") {
+    if (cleanUsername === undefined && hashedPassword === undefined && typeof isAdmin !== "boolean" && cleanEmail === undefined && disconnectAnilist !== true) {
       res.status(400).json({ message: "Nothing to update" });
       return;
     }
@@ -82,6 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (cleanUsername !== undefined) { sets.push("username = ?"); vals.push(cleanUsername); }
       if (hashedPassword !== undefined) { sets.push("password = ?", "token_version = token_version + 1"); vals.push(hashedPassword); }
       if (typeof isAdmin === "boolean") { sets.push("is_admin = ?"); vals.push(isAdmin ? 1 : 0); }
+      if (cleanEmail !== undefined) { sets.push("email = ?"); vals.push(cleanEmail); }
+      if (disconnectAnilist === true) { sets.push("anilist_token = ''"); }
 
       try {
         db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).run(...vals, id);

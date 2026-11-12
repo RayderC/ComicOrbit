@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "GET") {
     const users = db
-      .prepare("SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC")
+      .prepare("SELECT id, username, email, is_admin, created_at, anilist_token != '' AS anilist FROM users ORDER BY created_at DESC")
       .all();
     res.json(users);
     return;

@@ -21,8 +21,11 @@ function PrefillFromQuery({ onPrefill }: { onPrefill: (title: string, body: stri
 type AdminUser = {
   id: number;
   username: string;
+  email: string;
   is_admin: number;
   created_at: string;
+  /** 1 when the account has AniList connected. */
+  anilist: number;
 };
 
 type NotifyUser = { id: number; username: string; has_push: number };
@@ -38,6 +41,8 @@ export default function UsersPage() {
   const [editUsername, setEditUsername] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editIsAdmin, setEditIsAdmin] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editDisconnect, setEditDisconnect] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -103,6 +108,8 @@ export default function UsersPage() {
     setEditUsername(u.username);
     setEditPassword("");
     setEditIsAdmin(u.is_admin === 1);
+    setEditEmail(u.email ?? "");
+    setEditDisconnect(false);
     setEditError("");
   }
 
@@ -153,6 +160,9 @@ export default function UsersPage() {
     const body: Record<string, unknown> = { isAdmin: editIsAdmin };
     if (editUsername.trim()) body.username = editUsername.trim();
     if (editPassword) body.password = editPassword;
+    const u = users.find(x => x.id === id);
+    if (u && editEmail.trim() !== (u.email ?? "")) body.email = editEmail.trim();
+    if (editDisconnect) body.disconnectAnilist = true;
 
     const res = await fetch(`/api/users/${id}`, {
       method: "PATCH",
@@ -339,6 +349,17 @@ export default function UsersPage() {
                             style={{ height: "34px", fontSize: "13px" }}
                           />
                         </div>
+                        <div className="form-group" style={{ margin: 0, minWidth: "180px" }}>
+                          <label className="form-label" style={{ fontSize: "11px" }}>Email</label>
+                          <input
+                            type="email"
+                            className="form-input"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="none"
+                            style={{ height: "34px", fontSize: "13px" }}
+                          />
+                        </div>
                         <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--text-muted)", paddingBottom: "4px" }}>
                           <input
                             type="checkbox"
@@ -347,6 +368,12 @@ export default function UsersPage() {
                           />
                           Admin
                         </label>
+                        {users.find(x => x.id === u.id)?.anilist === 1 && (
+                          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--text-muted)", paddingBottom: "4px" }}>
+                            <input type="checkbox" checked={editDisconnect} onChange={(e) => setEditDisconnect(e.target.checked)} />
+                            Disconnect AniList
+                          </label>
+                        )}
                         <div style={{ display: "flex", gap: "8px", paddingBottom: "2px" }}>
                           <button className="btn btn-primary btn-sm" onClick={() => handleEditSave(u.id)} disabled={editSaving}>
                             {editSaving ? "Saving…" : "Save"}
@@ -360,7 +387,7 @@ export default function UsersPage() {
                   </tr>
                 ) : (
                   <tr key={u.id}>
-                    <td style={{ color: "var(--text)", fontWeight: 600 }}>{u.username}</td>
+                    <td style={{ color: "var(--text)", fontWeight: 600 }}>{u.username}{u.email && <div style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "12px" }}>{u.email}</div>}</td>
                     <td>
                       {u.is_admin === 1
                         ? <span className="badge badge-green">Admin</span>
