@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BackupsCard, UpdateNotice } from "../components/OpsCards";
+import { BackupsCard, SsoSetup, UpdateNotice } from "../components/OpsCards";
 
 interface Counts {
   series: number;
@@ -86,6 +86,7 @@ export default function DashboardOverview() {
       ) : (
         <p style={{ color: "var(--text-muted)" }}>Loading…</p>
       )}
+      <SsoSetup appName="ComicOrbit" />
       <BackupsCard />
     </>
   );

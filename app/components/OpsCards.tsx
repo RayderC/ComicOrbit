@@ -145,3 +145,45 @@ export function SignInsCard() {
     </div>
   );
 }
+
+type SsoStatus = { enabled: boolean; url: string | null; hint: string | null; fromEnv: boolean };
+
+/** "Sign in with Amethyst": Amethyst's address and the shared secret from its dashboard. */
+export function SsoSetup({ appName }: { appName: string }) {
+  const [s, setS] = useState<SsoStatus | null>(null);
+  const [url, setUrl] = useState("");
+  const [secret, setSecret] = useState("");
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  useEffect(() => { call<SsoStatus>("/api/admin/sso").then(setS).catch(() => {}); }, []);
+  if (!s) return null;
+  const save = async (body: object, ok: string) => {
+    setMsg(null);
+    try { setS(await call<SsoStatus>("/api/admin/sso", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); setSecret(""); setMsg({ text: ok, ok: true }); }
+    catch (e) { setMsg({ text: (e as Error).message, ok: false }); }
+  };
+  return (
+    <div className="card ops-card" id="sso-setup">
+      <h2 className="ops-title">Sign in with Amethyst</h2>
+      <p className="ops-hint">
+        Adds a <b>Sign in with Amethyst</b> button to the login page. It signs in the {appName} account with the same username as the
+        Amethyst account, so make the accounts here first. Passwords keep working too.
+      </p>
+      <p className="ops-hint">
+        {s.enabled
+          ? <>On, using <b>{s.url}</b> (secret ending in {s.hint}).{s.fromEnv ? " Set on the container, so change it there." : ""}</>
+          : <>Off. In Amethyst, open the dashboard, then <b>System</b>, turn on shared login, and copy its address and secret here.</>}
+      </p>
+      {!s.fromEnv && (
+        <div className="ops-form">
+          <input className="form-input" aria-label="Amethyst address" placeholder={s.url ?? "Amethyst's address, like http://192.168.1.5:3000"} value={url} onChange={e => setUrl(e.target.value)} />
+          <input className="form-input" aria-label="Shared secret" placeholder="Shared secret" type="password" autoComplete="off" value={secret} onChange={e => setSecret(e.target.value)} />
+          <div className="ops-actions">
+            <button type="button" className="btn btn-primary btn-sm" disabled={!secret || !(url || s.url)} onClick={() => save({ url: url || s.url, secret }, "Saved. The login page now has the button.")}>Save</button>
+            {s.enabled && <button type="button" className="btn btn-secondary btn-sm" onClick={() => save({ off: true }, "Turned off.")}>Turn off</button>}
+          </div>
+        </div>
+      )}
+      {msg && <p className={msg.ok ? "ops-hint" : "form-error"} role="status">{msg.text}</p>}
+    </div>
+  );
+}

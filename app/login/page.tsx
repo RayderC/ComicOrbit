@@ -33,7 +33,14 @@ const NODES: [number, number, string][] = [
 export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sso, setSso] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const ssoError = new URLSearchParams(window.location.search).get("sso_error");
+    if (ssoError) setError(ssoError);
+    fetch("/api/sso").then((r) => r.json()).then((d) => setSso(!!d?.enabled)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/setup")
@@ -109,6 +116,7 @@ export default function Login() {
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: "4px" }}>
             {loading ? "Signing in…" : "Sign In"}
           </button>
+          {sso && <a className="btn btn-secondary sso-btn" href="/api/sso?start=1">Sign in with Amethyst</a>}
         </form>
       </div>
     </div>

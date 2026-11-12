@@ -3530,3 +3530,5 @@ body > * { position: relative; z-index: 2; }
 .reader-spread.reader-rtl img:first-child { object-position: left center; }
 .reader-spread.reader-rtl img:last-child { object-position: right center; }
 .reader-spread-btn { font-size: 11px; white-space: nowrap; }
+.ops-form { display: flex; flex-direction: column; gap: 8px; }
+.sso-btn { display: flex; justify-content: center; text-decoration: none; margin-top: 10px; }
